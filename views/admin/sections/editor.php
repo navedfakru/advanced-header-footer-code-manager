@@ -10,7 +10,7 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<section class="ahfcm-panel" id="ahfcm-section-editor" data-ahfcm-panel="editor" role="tabpanel" hidden>
+<section class="ahfcm-panel" id="ahfcm-section-editor" data-ahfcm-panel="editor" role="tabpanel" aria-labelledby="ahfcm-tab-editor" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Editor', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'How the code editors look, and what happens to your data on uninstall.', 'advanced-header-footer-code-manager' ); ?></p>

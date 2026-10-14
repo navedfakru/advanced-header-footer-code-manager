@@ -36,7 +36,7 @@ $ahfcm_switch = static function ( $name, $checked, $label, $extra_attr = '' ) {
 	<?php
 };
 ?>
-<section class="ahfcm-panel" id="ahfcm-section-integrations" data-ahfcm-panel="integrations" role="tabpanel" hidden>
+<section class="ahfcm-panel" id="ahfcm-section-integrations" data-ahfcm-panel="integrations" role="tabpanel" aria-labelledby="ahfcm-tab-integrations" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Integrations', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'Detected automatically. Switch an integration off to stop all of its features without uninstalling anything.', 'advanced-header-footer-code-manager' ); ?></p>
@@ -61,9 +61,13 @@ $ahfcm_switch = static function ( $name, $checked, $label, $extra_attr = '' ) {
 					</span>
 					<div class="ahfcm-integration__title">
 						<h3><?php echo esc_html( $ahfcm_integration->get_label() ); ?></h3>
-						<span class="ahfcm-badge <?php echo $ahfcm_active ? 'is-ok' : 'is-off'; ?>">
-							<?php echo $ahfcm_active ? esc_html__( 'Detected', 'advanced-header-footer-code-manager' ) : esc_html__( 'Not installed', 'advanced-header-footer-code-manager' ); ?>
-						</span>
+						<?php if ( ! $ahfcm_active ) : ?>
+							<span class="ahfcm-badge is-off"><?php esc_html_e( 'Not installed', 'advanced-header-footer-code-manager' ); ?></span>
+						<?php elseif ( ! $ahfcm_on ) : ?>
+							<span class="ahfcm-badge is-paused"><?php esc_html_e( 'Detected · turned off', 'advanced-header-footer-code-manager' ); ?></span>
+						<?php else : ?>
+							<span class="ahfcm-badge is-ok"><?php esc_html_e( 'Detected · on', 'advanced-header-footer-code-manager' ); ?></span>
+						<?php endif; ?>
 					</div>
 					<?php $ahfcm_switch( $ahfcm_opt . '[integrations][' . $ahfcm_name . ']', $ahfcm_on, $ahfcm_integration->get_label() ); ?>
 				</header>

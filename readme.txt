@@ -4,7 +4,7 @@ Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.2.0
+Stable tag: 2.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,11 +39,19 @@ No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
 == Changelog ==
 
+= 2.2.1 =
+* Brand System v1.0: new plugin icon (SVG + 128/256/512 PNG), one-colour icon and a compact toolbar glyph used by the block editor, Breakdance and Oxygen buttons.
+* One set of semantic colour tokens (Electric Violet #5B35E8) shared by the settings app, editor, meta box and code panel; brand dark palette for the panel.
+* Settings app: header with the plugin icon, version and description; underline tabs with arrow-key/Home/End navigation; 1200px content width; brand primary buttons and focus rings; save results announced to screen readers.
+* Integration cards show "Detected · on", "Detected · turned off" or "Not installed" as text, not colour alone.
+* Accessibility: AA contrast checked for every text/background pair, visible focus states, reduced-motion support, disabled states for buttons and switches.
+* No changes to stored data, REST routes, hooks, option or meta names.
+
 = 2.2.0 =
 * New WindPress-style code structure: namespaced classes in src/ (Core, Admin, Api, Editor, Integration) with a built-in autoloader; views/ for templates; assets split into editor, panel, settings app and integration files.
 * Integrations layer (Gutenberg, Breakdance, Oxygen) with an Integrations screen: detection status and an on/off switch per integration. Add more via the ahfcm_integrations filter.
 * Oxygen 6 support: builder button (?oxygen=builder), code on oxygen_template/header/footer/block and popups, global block and popup detection from _oxygen_data.
-* Modern settings app: sticky top bar with status and Save, sidebar navigation (Global code, Integrations, Output, Editor, Tools, Help).
+* Modern settings app: sticky top bar with status and Save, top tab navigation (Global code, Integrations, Output, Editor, Tools, Help).
 * No data changes; 1.1.x settings and code carry over.
 
 

@@ -1,4 +1,7 @@
-/* Breakdance builder panel. Builds on admin.css (cards, fields, switches). */
+/*
+ * Code panel (block editor, Breakdance, Oxygen). Builds on editor.css and
+ * swaps in the brand's dark token set so the panel sits well in builder chrome.
+ */
 
 .ahfcm-bd-backdrop {
 	position: fixed;
@@ -7,121 +10,133 @@
 	display: grid;
 	place-items: center;
 	padding: 24px;
-	background: rgba(8, 10, 16, .55);
-	backdrop-filter: blur(2px);
+	background: rgba(17, 18, 24, .6);
 }
 .ahfcm-bd-backdrop[hidden] { display: none; }
 
-.ahfcm-bd {
-	/* Dark surfaces to match the builder chrome. */
-	--ahfcm-accent: #6d7cff;
-	--ahfcm-accent-soft: rgba(109, 124, 255, .16);
-	--ahfcm-text: #e6e8ee;
-	--ahfcm-muted: #9aa3b2;
-	--ahfcm-border: #2c3241;
-	--ahfcm-surface: #1b1f29;
-	--ahfcm-subtle: #232836;
+.ahfcm-app.ahfcm-bd {
+	/* Dark brand tokens. */
+	--ahfcm-brand-primary: #a78bfa;
+	--ahfcm-brand-hover: #c4b5fd;
+	--ahfcm-brand-deep: #c4b5fd;
+	--ahfcm-brand-tint: #30264d;
+	--ahfcm-brand-subtle: #241e38;
+	--ahfcm-on-brand: #111218;
+	--ahfcm-bg-page: #111218;
+	--ahfcm-bg-surface: #191b24;
+	--ahfcm-bg-subtle: #20232e;
+	--ahfcm-text-primary: #f5f6fa;
+	--ahfcm-text-secondary: #b4b9c8;
+	--ahfcm-text-muted: #858ca0;
+	--ahfcm-border: #343847;
+	--ahfcm-border-strong: #4a5062;
+	--ahfcm-control-off: #6e7488;
+	--ahfcm-success: #75e0a7;
+	--ahfcm-success-bg: rgba(18, 183, 106, .12);
+	--ahfcm-success-border: rgba(18, 183, 106, .35);
+	--ahfcm-warning: #fdb022;
+	--ahfcm-warning-bg: rgba(247, 144, 9, .1);
+	--ahfcm-warning-border: rgba(247, 144, 9, .35);
+	--ahfcm-danger: #fda29b;
+	--ahfcm-danger-bg: rgba(240, 68, 56, .12);
+	--ahfcm-danger-border: rgba(240, 68, 56, .4);
+	--ahfcm-lang-html: #5b35e8;
 	--ahfcm-shadow: none;
-	--ahfcm-warn: #fbbf24;
 
 	display: flex;
 	flex-direction: column;
 	width: min(1180px, 100%);
 	height: min(860px, calc(100vh - 48px));
-	border-radius: 14px;
-	background: #151922;
+	border-radius: var(--ahfcm-radius-lg);
+	background: var(--ahfcm-bg-page);
 	border: 1px solid var(--ahfcm-border);
 	box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .7);
-	color: var(--ahfcm-text);
-	font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+	color: var(--ahfcm-text-primary);
+	font: 13px/1.5 var(--ahfcm-font);
 	overflow: hidden;
 }
 .ahfcm-bd *, .ahfcm-bd *::before, .ahfcm-bd *::after { box-sizing: border-box; }
 .ahfcm-bd button { font: inherit; }
-.ahfcm-bd a { color: var(--ahfcm-accent); }
+.ahfcm-bd a { color: var(--ahfcm-brand-primary); }
 
 /* Header */
 .ahfcm-bd__header {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 12px 14px 12px 16px;
+	gap: var(--ahfcm-space-3);
+	padding: var(--ahfcm-space-3) 14px var(--ahfcm-space-3) var(--ahfcm-space-4);
 	border-bottom: 1px solid var(--ahfcm-border);
-	background: #181c26;
+	background: var(--ahfcm-bg-surface);
 }
-.ahfcm-bd__logo {
-	display: grid;
-	place-items: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
-	color: #fff;
-	background: linear-gradient(135deg, #6d7cff, #9b5cff);
-}
-.ahfcm-bd__title { margin: 0; font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; }
+.ahfcm-bd__logo { display: block; flex: 0 0 auto; width: 28px; height: 28px; }
+.ahfcm-bd__logo img { display: block; width: 28px; height: 28px; }
+.ahfcm-bd__title { margin: 0; font-size: 14px; font-weight: 600; color: var(--ahfcm-text-primary); white-space: nowrap; }
 .ahfcm-bd__tabs {
 	display: inline-flex;
 	gap: 2px;
-	margin-left: 8px;
+	margin-left: var(--ahfcm-space-2);
 	padding: 3px;
-	border-radius: 9px;
-	background: #10131a;
+	border-radius: var(--ahfcm-radius-sm);
+	background: var(--ahfcm-bg-page);
 	border: 1px solid var(--ahfcm-border);
 }
 .ahfcm-bd__tab {
 	padding: 4px 14px;
 	border: 0;
-	border-radius: 6px;
+	border-radius: 4px;
 	background: transparent;
-	color: var(--ahfcm-muted);
+	color: var(--ahfcm-text-secondary);
 	font-weight: 500;
 	cursor: pointer;
 }
-.ahfcm-bd__tab:hover { color: #fff; }
-.ahfcm-bd__tab.is-active { background: #2a3040; color: #fff; }
-.ahfcm-bd__tab:focus-visible { outline: 2px solid var(--ahfcm-accent); outline-offset: 1px; }
+.ahfcm-bd__tab:hover { color: var(--ahfcm-text-primary); }
+.ahfcm-bd__tab.is-active { background: var(--ahfcm-brand-tint); color: var(--ahfcm-brand-hover); }
+.ahfcm-bd__tab:focus-visible { outline: 2px solid var(--ahfcm-brand-primary); outline-offset: 1px; }
 
-.ahfcm-bd__state { margin-left: auto; font-size: 12px; color: var(--ahfcm-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ahfcm-bd__state.is-dirty { color: var(--ahfcm-warn); }
+.ahfcm-bd__state { margin-left: auto; font-size: 12px; color: var(--ahfcm-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ahfcm-bd__state.is-dirty { color: var(--ahfcm-warning); }
 .ahfcm-bd__state.is-dirty::before { content: "● "; }
-.ahfcm-bd__state.is-ok { color: #34d399; }
-.ahfcm-bd__state.is-error { color: #f87171; }
+.ahfcm-bd__state.is-ok { color: var(--ahfcm-success); }
+.ahfcm-bd__state.is-error { color: var(--ahfcm-danger); }
 
 .ahfcm-bd__save {
 	height: 32px;
 	padding: 0 18px;
 	border: 0;
-	border-radius: 8px;
-	background: var(--ahfcm-accent);
-	color: #fff;
+	border-radius: var(--ahfcm-radius-sm);
+	background: var(--ahfcm-brand-primary);
+	color: var(--ahfcm-on-brand);
 	font-weight: 600;
 	cursor: pointer;
+	transition: background .15s;
 }
-.ahfcm-bd__save:hover { filter: brightness(1.1); }
-.ahfcm-bd__save:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ahfcm-bd__save:hover { background: var(--ahfcm-brand-hover); }
+.ahfcm-bd__save:focus-visible { outline: 2px solid var(--ahfcm-text-primary); outline-offset: 2px; }
+.ahfcm-bd__save:disabled { opacity: .6; cursor: progress; }
 .ahfcm-bd__close {
 	display: grid;
 	place-items: center;
 	width: 32px;
 	height: 32px;
 	border: 1px solid var(--ahfcm-border);
-	border-radius: 8px;
+	border-radius: var(--ahfcm-radius-sm);
 	background: transparent;
-	color: var(--ahfcm-muted);
+	color: var(--ahfcm-text-secondary);
 	cursor: pointer;
 }
-.ahfcm-bd__close:hover { color: #fff; border-color: #475066; }
+.ahfcm-bd__close:hover { color: var(--ahfcm-text-primary); border-color: var(--ahfcm-border-strong); }
+.ahfcm-bd__close:focus-visible { outline: 2px solid var(--ahfcm-brand-primary); outline-offset: 1px; }
 
 /* Body */
-.ahfcm-bd__body { flex: 1 1 auto; overflow: auto; padding: 16px; }
+.ahfcm-bd__body { flex: 1 1 auto; overflow: auto; padding: var(--ahfcm-space-4); }
 .ahfcm-bd__pane[hidden], .ahfcm-bd [data-ahfcm-bd-form][hidden] { display: none; }
 .ahfcm-bd__notice {
 	margin: 0 0 14px;
-	padding: 12px 14px;
-	border-radius: 10px;
-	background: rgba(251, 191, 36, .08);
-	border: 1px solid rgba(251, 191, 36, .3);
-	color: #fcd34d;
+	padding: var(--ahfcm-space-3) 14px;
+	border-radius: var(--ahfcm-radius-md);
+	background: var(--ahfcm-warning-bg);
+	border: 1px solid var(--ahfcm-warning-border);
+	color: var(--ahfcm-warning);
 }
 .ahfcm-bd__notice[hidden] { display: none; }
 .ahfcm-bd .ahfcm-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 14px; }
@@ -130,38 +145,38 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 9px 16px;
+	padding: 9px var(--ahfcm-space-4);
 	border-top: 1px solid var(--ahfcm-border);
-	color: var(--ahfcm-muted);
+	color: var(--ahfcm-text-secondary);
 	font-size: 11px;
 }
 
-/* Dark overrides for shared components */
-.ahfcm-bd .ahfcm-metabox__bar { background: var(--ahfcm-subtle); }
-.ahfcm-bd .ahfcm-field__title { color: #fff; }
-.ahfcm-bd .ahfcm-field__icon--footer { color: #b794ff; background: rgba(155, 92, 255, .15); }
-.ahfcm-bd .ahfcm-chip { background: #10131a; color: #c9cfdb; }
-.ahfcm-bd .ahfcm-seg { background: #10131a; }
+/* Dark details for shared components (the rest follows the tokens). */
+.ahfcm-bd .ahfcm-chip,
+.ahfcm-bd .ahfcm-seg,
+.ahfcm-bd .ahfcm-btn { background: var(--ahfcm-bg-page); }
 .ahfcm-bd .ahfcm-seg__item input:checked + span,
-.ahfcm-bd .ahfcm-parts .ahfcm-part-tab.is-active span { background: #2a3040; color: #fff; }
-.ahfcm-bd .ahfcm-btn { background: #10131a; border-color: var(--ahfcm-border); color: #c9cfdb; }
-.ahfcm-bd .ahfcm-btn:hover { color: #fff; border-color: var(--ahfcm-accent); }
-.ahfcm-bd .ahfcm-btn[aria-pressed="true"] { background: var(--ahfcm-accent-soft); color: #fff; }
-.ahfcm-bd .ahfcm-switch__track { background: #3a4152; }
-.ahfcm-bd .ahfcm-field__hint { background: rgba(251, 191, 36, .08); border-top-color: rgba(251, 191, 36, .25); }
-.ahfcm-bd .ahfcm-field__desc { border-top-color: var(--ahfcm-border); }
-.ahfcm-bd .ahfcm-textarea { background: #0f1420; color: #e6edf3; }
+.ahfcm-bd .ahfcm-parts .ahfcm-part-tab.is-active span { background: var(--ahfcm-brand-tint); color: var(--ahfcm-text-primary); }
+.ahfcm-bd .ahfcm-btn:hover { color: var(--ahfcm-text-primary); }
+.ahfcm-bd .ahfcm-btn[aria-pressed="true"] { color: var(--ahfcm-text-primary); }
+.ahfcm-bd .ahfcm-switch__track::after { background: var(--ahfcm-text-primary); }
+.ahfcm-bd .ahfcm-switch input:checked + .ahfcm-switch__track::after { background: var(--ahfcm-on-brand); }
 
 /* Full screen inside the builder: no WP admin bar. */
 .ahfcm-bd .ahfcm-slot.is-fullscreen { inset: 0; z-index: 159995; }
 
-/* Top-bar button: inherits Breakdance's toolbar button styles. */
+/* Top-bar button: inherits the builder's own toolbar button styles. */
 .ahfcm-bd-topbar { display: flex; align-items: center; }
-
-.ahfcm-bd .ahfcm-master-off { background: rgba(240, 68, 56, .12); border-color: rgba(240, 68, 56, .4); color: #fda29b; }
-.ahfcm-bd .ahfcm-master-toggle:has(input[type="checkbox"]:not(:checked)) .ahfcm-switch__label { color: #fda29b; }
+#ahfcm-bd-button:focus-visible { outline: 2px solid #a78bfa; outline-offset: -2px; }
 
 /* Popovers opened from the panel must sit above it. */
 .ahfcm-picker { z-index: 160010 !important; }
 .CodeMirror-hints, .CodeMirror-lint-tooltip { z-index: 160020 !important; }
 html.ahfcm-bd-open .ahfcm-bd-backdrop { font-size: 13px; }
+
+@media screen and (max-width: 600px) {
+	.ahfcm-bd-backdrop { padding: 0; }
+	.ahfcm-app.ahfcm-bd { height: 100vh; border-radius: 0; }
+	.ahfcm-bd__header { flex-wrap: wrap; }
+	.ahfcm-bd__tabs { margin-left: 0; order: 5; }
+}

@@ -39,46 +39,53 @@ $ahfcm_sections = array(
 ?>
 <div class="wrap ahfcm-app ahfcm-shell ahfcm-theme-<?php echo esc_attr( $settings['editor_theme'] ); ?>" data-ahfcm-root data-ahfcm-context="global">
 
-	<header class="ahfcm-topbar">
-		<div class="ahfcm-brand">
-			<span class="ahfcm-brand__logo" aria-hidden="true">
-				<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="m8.6 16.6-4.6-4.6 4.6-4.6L7.2 6 1.2 12l6 6 1.4-1.4Zm6.8 0 4.6-4.6-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z"/></svg>
-			</span>
-			<div>
-				<h1 class="ahfcm-brand__title"><?php esc_html_e( 'Header & Footer Code', 'advanced-header-footer-code-manager' ); ?></h1>
-				<span class="ahfcm-brand__meta">
-					<?php
-					/* translators: %s: plugin version. */
-					printf( esc_html__( 'Version %s', 'advanced-header-footer-code-manager' ), esc_html( AHFCM_VERSION ) );
-					?>
+	<div class="ahfcm-masthead">
+		<header class="ahfcm-topbar">
+			<div class="ahfcm-brand">
+				<span class="ahfcm-brand__logo">
+					<img src="<?php echo esc_url( AHFCM_URL . 'assets/images/ahfcm-icon.svg' ); ?>" alt="" width="40" height="40">
 				</span>
+				<div>
+					<h1 class="ahfcm-brand__title"><?php esc_html_e( 'Header & Footer Code', 'advanced-header-footer-code-manager' ); ?></h1>
+					<span class="ahfcm-brand__meta">
+						<span class="ahfcm-brand__version">
+							<?php
+							/* translators: %s: plugin version. */
+							printf( esc_html__( 'Version %s', 'advanced-header-footer-code-manager' ), esc_html( AHFCM_VERSION ) );
+							?>
+						</span>
+						<span class="ahfcm-brand__tagline"><?php esc_html_e( 'HTML, CSS and JavaScript for your head and footer.', 'advanced-header-footer-code-manager' ); ?></span>
+					</span>
+				</div>
 			</div>
-		</div>
 
-		<span class="ahfcm-status-pill <?php echo $ahfcm_live ? 'is-live' : 'is-idle'; ?>">
-			<span class="ahfcm-status-pill__dot" aria-hidden="true"></span>
-			<?php echo $ahfcm_live ? esc_html__( 'Global code live', 'advanced-header-footer-code-manager' ) : esc_html__( 'Global code not running', 'advanced-header-footer-code-manager' ); ?>
-		</span>
+			<span class="ahfcm-status-pill <?php echo $ahfcm_live ? 'is-live' : 'is-idle'; ?>">
+				<span class="ahfcm-status-pill__dot" aria-hidden="true"></span>
+				<?php echo $ahfcm_live ? esc_html__( 'Global code live', 'advanced-header-footer-code-manager' ) : esc_html__( 'Global code not running', 'advanced-header-footer-code-manager' ); ?>
+			</span>
 
-		<div class="ahfcm-topbar__actions" data-ahfcm-submit>
-			<span class="ahfcm-topbar__dirty" data-ahfcm-dirty hidden><span class="ahfcm-dot" aria-hidden="true"></span><?php esc_html_e( 'Unsaved changes', 'advanced-header-footer-code-manager' ); ?></span>
-			<button type="submit" form="ahfcm-settings-form" class="button button-primary ahfcm-save"><?php esc_html_e( 'Save changes', 'advanced-header-footer-code-manager' ); ?></button>
+			<div class="ahfcm-topbar__actions" data-ahfcm-submit>
+				<span class="ahfcm-topbar__dirty" data-ahfcm-dirty hidden><span class="ahfcm-dot" aria-hidden="true"></span><?php esc_html_e( 'Unsaved changes', 'advanced-header-footer-code-manager' ); ?></span>
+				<button type="submit" form="ahfcm-settings-form" class="button button-primary ahfcm-save"><?php esc_html_e( 'Save changes', 'advanced-header-footer-code-manager' ); ?></button>
+			</div>
+		</header>
+
+		<div class="ahfcm-tabbar">
+			<div class="ahfcm-tabbar__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Sections', 'advanced-header-footer-code-manager' ); ?>">
+				<?php foreach ( $ahfcm_sections as $ahfcm_key => $ahfcm_section ) : ?>
+					<a href="#<?php echo esc_attr( $ahfcm_key ); ?>" id="ahfcm-tab-<?php echo esc_attr( $ahfcm_key ); ?>" class="ahfcm-nav<?php echo 'code' === $ahfcm_key ? ' is-active' : ''; ?>" role="tab" data-ahfcm-tab="<?php echo esc_attr( $ahfcm_key ); ?>" aria-controls="ahfcm-section-<?php echo esc_attr( $ahfcm_key ); ?>" aria-selected="<?php echo 'code' === $ahfcm_key ? 'true' : 'false'; ?>" tabindex="<?php echo 'code' === $ahfcm_key ? '0' : '-1'; ?>">
+						<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="<?php echo esc_attr( $ahfcm_section[1] ); ?>"/></svg>
+						<span><?php echo esc_html( $ahfcm_section[0] ); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+			<a class="ahfcm-tabbar__link" href="https://github.com/navedfakru/advanced-header-footer-code-manager" target="_blank" rel="noopener"><?php esc_html_e( 'Docs & changelog', 'advanced-header-footer-code-manager' ); ?><span aria-hidden="true"> ↗</span><span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'advanced-header-footer-code-manager' ); ?></span></a>
 		</div>
-	</header>
+	</div>
 
 	<hr class="wp-header-end">
 
 	<div class="ahfcm-layout">
-		<nav class="ahfcm-tabbar" role="tablist" aria-label="<?php esc_attr_e( 'Sections', 'advanced-header-footer-code-manager' ); ?>">
-			<?php foreach ( $ahfcm_sections as $ahfcm_key => $ahfcm_section ) : ?>
-				<a href="#<?php echo esc_attr( $ahfcm_key ); ?>" class="ahfcm-nav<?php echo 'code' === $ahfcm_key ? ' is-active' : ''; ?>" role="tab" data-ahfcm-tab="<?php echo esc_attr( $ahfcm_key ); ?>" aria-selected="<?php echo 'code' === $ahfcm_key ? 'true' : 'false'; ?>">
-					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="<?php echo esc_attr( $ahfcm_section[1] ); ?>"/></svg>
-					<span><?php echo esc_html( $ahfcm_section[0] ); ?></span>
-				</a>
-			<?php endforeach; ?>
-			<a class="ahfcm-tabbar__link" href="https://github.com/navedfakru/advanced-header-footer-code-manager" target="_blank" rel="noopener"><?php esc_html_e( 'Docs & changelog ↗', 'advanced-header-footer-code-manager' ); ?></a>
-		</nav>
-
 		<main class="ahfcm-main">
 			<?php settings_errors(); ?>
 			<?php if ( 'restored' === $ahfcm_notice ) : ?>
