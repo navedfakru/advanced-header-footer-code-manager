@@ -20,6 +20,7 @@ use AHFCM\Core\Injector;
 use AHFCM\Core\PostMeta;
 use AHFCM\Core\Security;
 use AHFCM\Core\Settings;
+use AHFCM\Core\Updater;
 use AHFCM\Core\Upgrade;
 use AHFCM\Integration\Loader;
 
@@ -67,9 +68,8 @@ final class Plugin {
 		}
 		$this->booted = true;
 
-		add_action( 'init', array( $this, 'load_textdomain' ) );
-
 		Security::register();
+		Updater::register();
 		Upgrade::register();
 		( new Settings() )->register();
 		( new PostMeta() )->register();
@@ -83,14 +83,5 @@ final class Plugin {
 			( new AdminPage() )->register();
 			( new MetaBox() )->register();
 		}
-	}
-
-	/**
-	 * Loads translations.
-	 *
-	 * @return void
-	 */
-	public function load_textdomain() {
-		load_plugin_textdomain( 'advanced-header-footer-code-manager', false, dirname( plugin_basename( AHFCM_FILE ) ) . '/languages' );
 	}
 }

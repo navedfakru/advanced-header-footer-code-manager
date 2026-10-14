@@ -1,14 +1,14 @@
 === Advanced Header & Footer Code Manager ===
-Contributors: naved
+Contributors: navedx
 Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.3.0
+Stable tag: 2.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add trusted HTML, CSS and JavaScript to <head> and before </body> — site-wide, per page, or per Breakdance/Oxygen template — from the block editor, the builder or a modern settings app.
+Add HTML, CSS and JavaScript to the head and footer: site-wide, per page, or per Breakdance/Oxygen template, with a CodeMirror editor.
 
 == Description ==
 
@@ -19,7 +19,25 @@ Add trusted HTML, CSS and JavaScript to <head> and before </body> — site-wide,
 * Only users with unfiltered_html can edit code. PHP is never executed.
 * Integrations: Gutenberg, Breakdance, Oxygen 6.
 
-See README.md for documentation, file structure, hooks and the security model.
+* Position per code card: just before </head> / </body>, or a custom wp_head / wp_footer priority. Page code can follow the global position.
+
+= Output order =
+
+Within the head and the footer, code prints in this order: global code, then the Breakdance/Oxygen header, template(s), footer, popups and global blocks used by the page, then the page's own code. Each snippet prints its CSS (inside <style>), then its HTML exactly as written, then its JavaScript (inside <script>).
+
+= Security =
+
+* Editing code requires the unfiltered_html capability (administrators on single sites, super admins on multisite). Every save checks a nonce and the user's capabilities.
+* Code is stored exactly as typed and output only on normal front-end page views — never in feeds, REST/AJAX responses, embeds or builder previews (unless you allow previews).
+* Nothing is sent to external services. To check for updates, WordPress asks the public GitHub API for the latest release of this plugin (at most every 12 hours; no site data is sent).
+
+= For developers =
+
+Filters: ahfcm_integrations, ahfcm_should_inject, ahfcm_snippet_output, ahfcm_post_types, ahfcm_builder_query_params, ahfcm_breakdance_button_visible, ahfcm_panel_replaces_meta_box. Full documentation and source: https://github.com/navedfakru/advanced-header-footer-code-manager
+
+= Third-party code =
+
+Bundles js-beautify 1.15.4 (MIT), unmodified: https://www.npmjs.com/package/js-beautify/v/1.15.4 — source at https://github.com/beautifier/js-beautify
 
 == Installation ==
 
@@ -33,11 +51,30 @@ See README.md for documentation, file structure, hooks and the security model.
 
 No. Code is only deleted on plugin deletion, and only if you enabled "Permanently delete all global and per-post code" in Settings.
 
+= Who can edit the code? =
+
+Only users with the unfiltered_html capability. Other users don't see the editors or the toolbar buttons, and the REST endpoints refuse them.
+
+= Does it need Breakdance or Oxygen? =
+
+No. Global and per-page code work with any theme. Breakdance and Oxygen 6 integrations switch on automatically when the builder is active.
+
 = Can I run PHP? =
 
 No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
+== Screenshots ==
+
+1. Code panel in the block editor, Breakdance and Oxygen: page and global code, each with a Position and HTML, CSS and JS tabs.
+2. Integrations: block editor, Breakdance and Oxygen, with toolbar button visibility by role and user.
+3. Output: content types with per-page code, global header and footer positions, HTML comment markers.
+
 == Changelog ==
+
+= 2.3.1 =
+* Updates from GitHub: new versions published as GitHub releases show up in Dashboard → Updates and on the Plugins screen, and install like any other update (automatic updates work too).
+* "View details" shows the release notes.
+* Translations are loaded by WordPress; the plugin no longer calls load_plugin_textdomain().
 
 = 2.3.0 =
 * New: Position setting on every code card — global code, pages, posts, templates, headers, footers, popups and global blocks. Choose "Just before </head>" / "Just before </body>" (printed last in wp_head / wp_footer) or a custom hook priority. Page and builder code can follow the global position (default).

@@ -7,7 +7,7 @@ per page, or per **Breakdance / Oxygen** template, header, footer, popup or glob
 You edit the code in CodeMirror, with autocomplete, linting, formatting and a color picker,
 from the **block editor**, the **Breakdance / Oxygen builder**, or the settings app.
 
-- Version 2.3.0, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
+- Version 2.3.1, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
 - Integrations: Gutenberg (block editor), Breakdance 2+, Oxygen 6 (Oxygen Classic 4.x is not supported)
 - License: GPL-2.0-or-later. It bundles js-beautify 1.15.4 (MIT).
 
@@ -234,6 +234,23 @@ deactivate/reactivate. Builder checks adapt to whichever builder is running
 ```bash
 node --test tests/js/core.test.js
 ```
+
+## Updates
+
+The plugin is distributed through GitHub releases, not WordPress.org. The header
+`Update URI: https://github.com/navedfakru/advanced-header-footer-code-manager` makes
+WordPress ask `AHFCM\Core\Updater` (filter `update_plugins_github.com`) instead of
+WordPress.org. It reads the latest release from the GitHub API (cached 12 hours; "Check
+again" on Dashboard → Updates refreshes it) and offers the attached
+`advanced-header-footer-code-manager-X.Y.Z.zip` as the update package.
+
+To publish a version:
+
+1. Bump the version in the plugin header, `constant.php` and readme.txt.
+2. Build the zip. Its root folder must be `advanced-header-footer-code-manager/`
+   (GitHub's automatic source zips are not used, because they are named after the tag).
+3. Create a GitHub release with tag `vX.Y.Z` and attach the zip. Drafts and
+   pre-releases are ignored.
 
 ## Uninstall
 
