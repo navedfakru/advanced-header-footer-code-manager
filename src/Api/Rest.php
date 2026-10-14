@@ -222,7 +222,7 @@ final class Rest {
 			if ( ! isset( $data['slots'][ $slot ] ) || ! is_array( $data['slots'][ $slot ] ) ) {
 				continue;
 			}
-			foreach ( array( 'html', 'css', 'js', 'enabled' ) as $key ) {
+			foreach ( array( 'html', 'css', 'js', 'enabled', 'placement', 'priority' ) as $key ) {
 				if ( array_key_exists( $key, $data['slots'][ $slot ] ) ) {
 					$settings['slots'][ $slot ][ $key ] = $data['slots'][ $slot ][ $key ];
 				}

@@ -39,7 +39,7 @@ use AHFCM\Editor\Fields;
 	<div class="ahfcm-grid">
 		<?php
 		foreach ( Settings::SLOTS as $ahfcm_slot ) {
-			Fields::render_slot( 'ahfcm-global-' . $ahfcm_slot, $ahfcm_opt . '[slots][' . $ahfcm_slot . ']', $ahfcm_slot, $settings['slots'][ $ahfcm_slot ], __( 'Site-wide', 'advanced-header-footer-code-manager' ) );
+			Fields::render_slot( 'ahfcm-global-' . $ahfcm_slot, $ahfcm_opt . '[slots][' . $ahfcm_slot . ']', $ahfcm_slot, $settings['slots'][ $ahfcm_slot ], __( 'Site-wide', 'advanced-header-footer-code-manager' ), 'global_mirror' );
 		}
 		?>
 	</div>

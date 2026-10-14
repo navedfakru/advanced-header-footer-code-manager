@@ -197,6 +197,11 @@
 .ahfcm-row__label > :first-child { color: var(--ahfcm-text-primary); font-weight: 600; }
 .ahfcm-row__label p { margin: 2px 0 0; color: var(--ahfcm-text-secondary); font-size: 12px; }
 .ahfcm-row__control .ahfcm-checks { justify-content: flex-end; }
+/* Position control inside a settings row (Output tab). */
+.ahfcm-row__control--place { flex: 0 1 420px; }
+.ahfcm-row__control--place .ahfcm-place { justify-content: flex-end; padding: 0; }
+.ahfcm-row__control--place .ahfcm-place__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.ahfcm-row__control--place .ahfcm-place__hint { text-align: right; }
 .ahfcm-inline-fields { display: flex; flex-wrap: wrap; gap: var(--ahfcm-space-2) var(--ahfcm-space-4); }
 .ahfcm-inline-fields label { display: inline-flex; align-items: center; gap: 6px; }
 .ahfcm-inline-fields .ahfcm-prio { width: 9.5em; }

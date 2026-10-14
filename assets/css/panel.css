@@ -43,6 +43,7 @@
 	--ahfcm-lang-html: #5b35e8;
 	--ahfcm-shadow: none;
 
+	color-scheme: dark; /* native select/number controls */
 	display: flex;
 	flex-direction: column;
 	width: min(1180px, 100%);
@@ -152,6 +153,8 @@
 }
 
 /* Dark details for shared components (the rest follows the tokens). */
+.ahfcm-bd .ahfcm-place select.ahfcm-place__select,
+.ahfcm-bd .ahfcm-place input.ahfcm-place__number { background-color: var(--ahfcm-bg-page); }
 .ahfcm-bd .ahfcm-chip,
 .ahfcm-bd .ahfcm-seg,
 .ahfcm-bd .ahfcm-btn { background: var(--ahfcm-bg-page); }

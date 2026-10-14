@@ -122,10 +122,12 @@ final class PostMeta {
 		$slots = array();
 		foreach ( Settings::SLOTS as $slot ) {
 			$slots[ $slot ] = array(
-				'html'    => '',
-				'css'     => '',
-				'js'      => '',
-				'enabled' => true,
+				'html'      => '',
+				'css'       => '',
+				'js'        => '',
+				'enabled'   => true,
+				'placement' => Settings::PLACEMENT_INHERIT,
+				'priority'  => Settings::DEFAULT_PRIORITY,
 			);
 		}
 
@@ -183,7 +185,7 @@ final class PostMeta {
 			return false;
 		}
 		foreach ( Settings::SLOTS as $slot ) {
-			if ( Settings::slot_has_code( $data['slots'][ $slot ] ) || ! $data['slots'][ $slot ]['enabled'] ) {
+			if ( Settings::slot_has_code( $data['slots'][ $slot ] ) || ! $data['slots'][ $slot ]['enabled'] || Settings::PLACEMENT_INHERIT !== $data['slots'][ $slot ]['placement'] ) {
 				return false;
 			}
 		}

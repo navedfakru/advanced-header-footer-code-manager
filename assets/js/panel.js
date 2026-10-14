@@ -83,6 +83,29 @@
 		return box ? box.querySelector( '[name="ahfcm' + name + '"]:not([type="hidden"])' ) : null;
 	}
 
+	/** Adds placement + priority from a Position control to slot data. */
+	function readPlacement( data, select, number ) {
+		if ( select ) {
+			data.placement = select.value;
+		}
+		if ( number && number.value !== '' && ! isNaN( parseInt( number.value, 10 ) ) ) {
+			data.priority = parseInt( number.value, 10 );
+		}
+	}
+
+	/** Shows saved placement + priority in a Position control (no change event). */
+	function writePlacement( data, select, number ) {
+		if ( select && data.placement ) {
+			select.value = data.placement;
+			if ( window.AHFCMEditor && window.AHFCMEditor.syncPlacement ) {
+				window.AHFCMEditor.syncPlacement( select );
+			}
+		}
+		if ( number && data.priority !== undefined ) {
+			number.value = data.priority;
+		}
+	}
+
 	/** Current (possibly unsaved) values of the meta box, or null. */
 	function readMetaBox( slots ) {
 		if ( ! metaBox() || ! boxInput( '[enabled]' ) ) {
@@ -95,6 +118,7 @@
 		slots.forEach( function ( slot ) {
 			var prefix = '[slots][' + slot + ']';
 			var data = { enabled: boxInput( prefix + '[enabled]' ) ? boxInput( prefix + '[enabled]' ).checked : true };
+			readPlacement( data, boxInput( prefix + '[placement]' ), boxInput( prefix + '[priority]' ) );
 			PARTS.forEach( function ( part ) {
 				var input = boxInput( prefix + '[' + part + ']' );
 				var cmField = input && input.closest( '[data-ahfcm-field]' );
@@ -122,6 +146,7 @@
 		Object.keys( data.slots || {} ).forEach( function ( slot ) {
 			var prefix = '[slots][' + slot + ']';
 			setCheck( boxInput( prefix + '[enabled]' ), data.slots[ slot ].enabled );
+			writePlacement( data.slots[ slot ], boxInput( prefix + '[placement]' ), boxInput( prefix + '[priority]' ) );
 			PARTS.forEach( function ( part ) {
 				var input = boxInput( prefix + '[' + part + ']' );
 				if ( ! input ) {
@@ -377,6 +402,7 @@
 				return;
 			}
 			field( prefix + '[enabled]' ).checked = !! s.enabled;
+			writePlacement( s, field( prefix + '[placement]' ), field( prefix + '[priority]' ) );
 			card.classList.toggle( 'is-disabled', ! s.enabled );
 			// Open the first tab with code; the Slot controller applies it on mount.
 			card.setAttribute( 'data-active', active || 'html' );
@@ -392,6 +418,7 @@
 		slots.forEach( function ( slot ) {
 			var prefix = base + '[slots][' + slot + ']';
 			var data = { enabled: field( prefix + '[enabled]' ).checked };
+			readPlacement( data, field( prefix + '[placement]' ), field( prefix + '[priority]' ) );
 			PARTS.forEach( function ( part ) {
 				var textarea = field( prefix + '[' + part + ']' );
 				data[ part ] = textarea ? textarea.value : '';

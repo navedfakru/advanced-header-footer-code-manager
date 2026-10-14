@@ -4,7 +4,7 @@ Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.2.1
+Stable tag: 2.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,12 @@ No. Code is only deleted on plugin deletion, and only if you enabled "Permanentl
 No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
 == Changelog ==
+
+= 2.3.0 =
+* New: Position setting on every code card — global code, pages, posts, templates, headers, footers, popups and global blocks. Choose "Just before </head>" / "Just before </body>" (printed last in wp_head / wp_footer) or a custom hook priority. Page and builder code can follow the global position (default).
+* Each snippet now prints at its own priority; snippets at the same priority keep the order global → layout → page.
+* Global positions are edited directly on the Output tab (also shown on the Global code cards, kept in sync).
+* Schema 4: existing code prints exactly where it did before. Forms and builder panels opened before the update are refused instead of overwriting code.
 
 = 2.2.1 =
 * Brand System v1.0: new plugin icon (SVG + 128/256/512 PNG), one-colour icon and a compact toolbar glyph used by the block editor, Breakdance and Oxygen buttons.

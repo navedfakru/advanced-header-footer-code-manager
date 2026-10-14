@@ -54,14 +54,31 @@ final class Fields {
 	 * @param string $id         Element ID prefix.
 	 * @param string $name_base  Form name prefix, e.g. ahfcm[slots][head].
 	 * @param string $slot       head|footer.
-	 * @param array  $data       Slot data (html, css, js, enabled).
+	 * @param array  $data       Slot data (html, css, js, enabled, placement, priority).
 	 * @param string $scope_note Short scope reminder.
+	 * @param string $context    post|global|global_mirror (see render_placement()).
 	 * @return void
 	 */
-	public static function render_slot( $id, $name_base, $slot, array $data, $scope_note ) {
+	public static function render_slot( $id, $name_base, $slot, array $data, $scope_note, $context = 'post' ) {
 		$labels    = self::slot_labels();
 		$languages = self::language_labels();
 
 		include AHFCM_DIR . 'views/editor/slot.php';
+	}
+
+	/**
+	 * Renders the Position control of one slot.
+	 *
+	 * @param string $id        Element ID prefix.
+	 * @param string $name_base Form name prefix, e.g. ahfcm[slots][head].
+	 * @param string $slot      head|footer.
+	 * @param array  $data      Slot data (placement, priority).
+	 * @param string $context   post (can follow the global position), global
+	 *                          (saved), global_mirror (unsaved copy synced with
+	 *                          the global control by editor.js).
+	 * @return void
+	 */
+	public static function render_placement( $id, $name_base, $slot, array $data, $context = 'post' ) {
+		include AHFCM_DIR . 'views/editor/placement.php';
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Section: Output (where per-page code is available, hook priorities, markers).
+ * Section: Output (where per-page code is available, positions, markers).
  *
  * @var array           $settings   Global settings.
  * @var string          $ahfcm_opt  Option name.
@@ -10,6 +10,8 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+use AHFCM\Editor\Fields;
 ?>
 <section class="ahfcm-panel" id="ahfcm-section-output" data-ahfcm-panel="output" role="tabpanel" aria-labelledby="ahfcm-tab-output" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
@@ -36,16 +38,29 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 		</div>
 
-		<div class="ahfcm-row">
-			<div class="ahfcm-row__label">
-				<span><?php esc_html_e( 'Hook priority', 'advanced-header-footer-code-manager' ); ?></span>
-				<p><?php esc_html_e( 'Lower runs earlier. The default 1000001 prints at the very end of <head> and <body>, after theme and builder CSS/JS, so your styles win and scripts can use loaded libraries. Use a low number (e.g. 1) for tags that must load first.', 'advanced-header-footer-code-manager' ); ?></p>
+		<?php
+		$ahfcm_place_rows = array(
+			'head'   => array(
+				__( 'Global header code position', 'advanced-header-footer-code-manager' ),
+				__( 'Where the site-wide Header Code prints in <head>. Pages and builder items set to "Same as global code" follow it.', 'advanced-header-footer-code-manager' ),
+			),
+			'footer' => array(
+				__( 'Global footer code position', 'advanced-header-footer-code-manager' ),
+				__( 'Where the site-wide Footer Code prints before </body>. Pages and builder items set to "Same as global code" follow it.', 'advanced-header-footer-code-manager' ),
+			),
+		);
+		foreach ( $ahfcm_place_rows as $ahfcm_slot => $ahfcm_row ) :
+			?>
+			<div class="ahfcm-row">
+				<div class="ahfcm-row__label">
+					<span><?php echo esc_html( $ahfcm_row[0] ); ?></span>
+					<p><?php echo esc_html( $ahfcm_row[1] ); ?></p>
+				</div>
+				<div class="ahfcm-row__control ahfcm-row__control--place">
+					<?php Fields::render_placement( 'ahfcm-output-' . $ahfcm_slot, $ahfcm_opt . '[slots][' . $ahfcm_slot . ']', $ahfcm_slot, $settings['slots'][ $ahfcm_slot ], 'global' ); ?>
+				</div>
 			</div>
-			<div class="ahfcm-row__control ahfcm-inline-fields">
-				<label><code>wp_head</code> <input type="number" class="regular-text ahfcm-prio" min="-99999999" max="99999999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][head][priority]" value="<?php echo esc_attr( $settings['slots']['head']['priority'] ); ?>"></label>
-				<label><code>wp_footer</code> <input type="number" class="regular-text ahfcm-prio" min="-99999999" max="99999999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][footer][priority]" value="<?php echo esc_attr( $settings['slots']['footer']['priority'] ); ?>"></label>
-			</div>
-		</div>
+		<?php endforeach; ?>
 
 		<div class="ahfcm-row">
 			<div class="ahfcm-row__label">

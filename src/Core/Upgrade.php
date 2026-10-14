@@ -141,7 +141,9 @@ final class Upgrade {
 			}
 
 			// Re-normalizing fills keys added by newer schemas with defaults
-			// while keeping every existing value. Schema 3 (separate HTML/CSS/JS
+			// while keeping every existing value. Schema 4 adds per-slot
+			// `placement` (default: the stored priority, so output is unchanged).
+			// Schema 3 (separate HTML/CSS/JS
 			// parts) is converted from the old code+language shape here.
 			$current['version'] = Settings::SCHEMA_VERSION;
 			update_option( Settings::OPTION, Settings::normalize( $current ) );
