@@ -10,8 +10,15 @@
  *     3. Code of the current singular post/page/CPT entry
  *
  * Each snippet prints CSS (in <style>), then HTML, then JS (in <script>).
- * Default hook priority is 1000001 for both locations, right after the
- * builders' own CSS/JS (Breakdance/Oxygen use 1000000).
+ *
+ * Placement: every snippet prints at its slot's hook priority (default
+ * 1000001, right after the builders' own CSS/JS at 1000000), or last in
+ * wp_head / wp_footer ("just before </head> / </body>"). Per-page snippets
+ * follow the global placement unless they set their own. Snippets sharing a
+ * priority keep the order above. Which documents apply is only known once
+ * the template is chosen, so the hooks are added at the start of wp_head /
+ * wp_footer. No output buffering is used: Breakdance renders the page inside
+ * its own buffer, and a nested one would break it.
  *
  * @package AHFCM
  */
@@ -40,14 +47,60 @@ final class Injector {
 	 * @return void
 	 */
 	public function register() {
-		$settings = Settings::get();
-
-		add_action( 'wp_head', array( $this, 'print_head' ), $settings['slots']['head']['priority'] );
-		add_action( 'wp_footer', array( $this, 'print_footer' ), $settings['slots']['footer']['priority'] );
+		add_action( 'wp_head', array( $this, 'plan_head' ), PHP_INT_MIN );
+		add_action( 'wp_footer', array( $this, 'plan_footer' ), PHP_INT_MIN );
 	}
 
 	/**
-	 * Prints head code.
+	 * Schedules head snippets at their priorities.
+	 *
+	 * @return void
+	 */
+	public function plan_head() {
+		$this->plan( 'head', 'wp_head' );
+	}
+
+	/**
+	 * Schedules footer snippets at their priorities.
+	 *
+	 * @return void
+	 */
+	public function plan_footer() {
+		$this->plan( 'footer', 'wp_footer' );
+	}
+
+	/**
+	 * Adds one callback per distinct priority to the running hook. WordPress
+	 * runs callbacks added to a hook in progress when their priority comes.
+	 *
+	 * @param string $slot head|footer.
+	 * @param string $hook wp_head|wp_footer.
+	 * @return void
+	 */
+	private function plan( $slot, $hook ) {
+		if ( isset( $this->printed[ $slot ] ) || ! $this->should_inject() ) {
+			return;
+		}
+		$this->printed[ $slot ] = true;
+
+		foreach ( $this->groups( $slot ) as $priority => $html ) {
+			$key = $slot . ':' . $priority;
+			add_action(
+				$hook,
+				function () use ( $key, $html ) {
+					if ( isset( $this->printed[ $key ] ) ) {
+						return; // A theme may fire the hook twice.
+					}
+					$this->printed[ $key ] = true;
+					echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted administrator code, see snippets().
+				},
+				$priority
+			);
+		}
+	}
+
+	/**
+	 * Prints head code (all snippets at once, ignoring placement).
 	 *
 	 * @return void
 	 */
@@ -56,7 +109,7 @@ final class Injector {
 	}
 
 	/**
-	 * Prints footer code.
+	 * Prints footer code (all snippets at once, ignoring placement).
 	 *
 	 * @return void
 	 */
@@ -76,20 +129,48 @@ final class Injector {
 		}
 		$this->printed[ $slot ] = true;
 
-		echo $this->render( $slot ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted administrator code, see render().
+		echo $this->render( $slot ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted administrator code, see snippets().
 	}
 
 	/**
-	 * Builds the HTML for one slot.
-	 *
-	 * Code is written only by users holding unfiltered_html (see Security) and
-	 * must reach the browser unmodified, so it is deliberately not escaped.
+	 * HTML of a slot, every snippet in output order.
 	 *
 	 * @param string   $slot    head|footer.
 	 * @param int|null $post_id Render only this document (null = current request).
 	 * @return string
 	 */
 	public function render( $slot, $post_id = null ) {
+		return implode( '', wp_list_pluck( $this->snippets( $slot, $post_id ), 'html' ) );
+	}
+
+	/**
+	 * HTML of a slot grouped by hook priority (output order kept per group).
+	 *
+	 * @param string   $slot    head|footer.
+	 * @param int|null $post_id Render only this document (null = current request).
+	 * @return array<int,string>
+	 */
+	public function groups( $slot, $post_id = null ) {
+		$groups = array();
+		foreach ( $this->snippets( $slot, $post_id ) as $snippet ) {
+			$priority            = $snippet['priority'];
+			$groups[ $priority ] = ( isset( $groups[ $priority ] ) ? $groups[ $priority ] : '' ) . $snippet['html'];
+		}
+		ksort( $groups );
+		return $groups;
+	}
+
+	/**
+	 * Builds the snippets of one slot.
+	 *
+	 * Code is written only by users holding unfiltered_html (see Security) and
+	 * must reach the browser unmodified, so it is deliberately not escaped.
+	 *
+	 * @param string   $slot    head|footer.
+	 * @param int|null $post_id Render only this document (null = current request).
+	 * @return array<int,array{priority:int,html:string}>
+	 */
+	public function snippets( $slot, $post_id = null ) {
 		$global = Settings::get();
 
 		if ( null === $post_id ) {
@@ -116,7 +197,7 @@ final class Injector {
 			}
 		}
 
-		$html = '';
+		$snippets = array();
 		foreach ( $chunks as $chunk ) {
 			list( $source, $doc_id, $data ) = $chunk;
 			if ( ! $data['enabled'] || ! Settings::slot_has_code( $data ) ) {
@@ -142,10 +223,13 @@ final class Injector {
 			} else {
 				$code = "\n{$code}\n";
 			}
-			$html .= $code;
+			$snippets[] = array(
+				'priority' => Settings::slot_priority( $data, $global['slots'][ $slot ] ),
+				'html'     => $code,
+			);
 		}
 
-		return $html;
+		return $snippets;
 	}
 
 	/**

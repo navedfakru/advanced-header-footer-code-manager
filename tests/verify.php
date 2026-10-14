@@ -217,6 +217,80 @@ try {
 	ahfcm_check( '15 No duplicate output (each marker once)', 1 === ahfcm_count( $html_a, 'content="G-HEAD"' ) && 1 === ahfcm_count( $html_a, 'G-FOOT' ) && 1 === ahfcm_count( $html_a, 'P-HEAD' ) && 1 === ahfcm_count( $html_a, '<!-- P-FOOT -->' ) );
 
 	ahfcm_check( 'Body-start slot is gone: nothing printed on wp_body_open', ! has_action( 'wp_body_open' ) || false === strpos( $html_a, 'AHFCM body_open' ) );
+
+	WP_CLI::line( 'Position (placement)' );
+	$place_g = Settings::get();
+	$place_p = PostMeta::get( $page_a );
+	ahfcm_check( 'Placement defaults: global = custom priority, page = same as global', Settings::PLACEMENT_PRIORITY === $place_g['slots']['head']['placement'] && Settings::PLACEMENT_INHERIT === $place_p['slots']['head']['placement'] && Settings::PLACEMENT_INHERIT === $place_p['slots']['footer']['placement'] );
+	$bogus = Settings::normalize( array( 'slots' => array( 'head' => array( 'placement' => 'inherit', 'priority' => 'x' ), 'footer' => array( 'placement' => 'bogus', 'priority' => 999999999999 ) ) ) );
+	ahfcm_check( 'Global placement rejects "inherit" and unknown values; priority clamped', Settings::PLACEMENT_PRIORITY === $bogus['slots']['head']['placement'] && Settings::PLACEMENT_PRIORITY === $bogus['slots']['footer']['placement'] && Settings::MAX_PRIORITY === $bogus['slots']['footer']['priority'] && Settings::DEFAULT_PRIORITY === $bogus['slots']['head']['priority'] );
+	$bogus_p = PostMeta::normalize( array( 'slots' => array( 'head' => array( 'placement' => 'end' ), 'footer' => array( 'placement' => 'nope' ) ) ) );
+	ahfcm_check( 'Page placement accepts end, falls back to inherit', Settings::PLACEMENT_END === $bogus_p['slots']['head']['placement'] && Settings::PLACEMENT_INHERIT === $bogus_p['slots']['footer']['placement'] );
+	ahfcm_check( 'slot_priority(): end = PHP_INT_MAX, inherit follows global', PHP_INT_MAX === Settings::slot_priority( array( 'placement' => 'end' ) ) && 77 === Settings::slot_priority( array( 'placement' => 'inherit' ), array( 'placement' => 'priority', 'priority' => 77 ) ) && PHP_INT_MAX === Settings::slot_priority( array( 'placement' => 'inherit' ), array( 'placement' => 'end' ) ) );
+
+	// Global head + footer "just before </head> / </body>".
+	$place_end                                  = $place_g;
+	$place_end['slots']['head']['placement']    = Settings::PLACEMENT_END;
+	$place_end['slots']['footer']['placement']  = Settings::PLACEMENT_END;
+	update_option( Settings::OPTION, $place_end );
+	Settings::flush_cache();
+	$html_end = ahfcm_fetch( get_permalink( $page_b ) );
+	ahfcm_check( 'Global head "just before </head>" is the last thing in <head>', (bool) preg_match( '#<!-- /AHFCM head \(global\) -->\s*</head>#', $html_end ) );
+	ahfcm_check( 'Global footer "just before </body>" is the last thing in <body>', (bool) preg_match( '#<!-- /AHFCM footer \(global\) -->\s*</body>#', $html_end ) );
+	ahfcm_check( 'End placement prints once', 1 === ahfcm_count( $html_end, 'content="G-HEAD"' ) && 1 === ahfcm_count( $html_end, 'G-FOOT' ) );
+
+	// Page A follows the global "end" placement by default.
+	$html_inh = ahfcm_fetch( get_permalink( $page_a ) );
+	ahfcm_check( 'Page code "same as global" moves with it (end, after global)', (bool) preg_match( '#<!-- /AHFCM head \(post ' . $page_a . '\) -->\s*</head>#', $html_inh ) && strpos( $html_inh, 'content="G-HEAD"' ) < strpos( $html_inh, 'P-HEAD' ) );
+
+	// Page A head at a custom early priority, footer at the end; saved through the meta box form.
+	$form_a = PostMeta::get( $page_a );
+	$form_a['slots']['head']['placement']   = 'priority';
+	$form_a['slots']['head']['priority']    = '-5';
+	$form_a['slots']['footer']['placement'] = 'end';
+	$form_a['enabled']                      = '1';
+	ahfcm_submit_meta_box( $page_a, $form_a );
+	$saved_a = PostMeta::get( $page_a );
+	ahfcm_check( 'Meta box saves page placement + priority', 'priority' === $saved_a['slots']['head']['placement'] && -5 === $saved_a['slots']['head']['priority'] && 'end' === $saved_a['slots']['footer']['placement'] );
+	$place_mix                                 = $place_g;
+	$place_mix['slots']['head']['placement']   = Settings::PLACEMENT_END;
+	$place_mix['slots']['footer']['placement'] = Settings::PLACEMENT_PRIORITY;
+	update_option( Settings::OPTION, $place_mix );
+	Settings::flush_cache();
+	$html_mix = ahfcm_fetch( get_permalink( $page_a ) );
+	$mix_p    = strpos( $html_mix, 'P-HEAD' );
+	$mix_g    = strpos( $html_mix, 'content="G-HEAD"' );
+	$mix_t    = stripos( $html_mix, '<title' );
+	ahfcm_check( 'Page head at priority -5 prints before global head (end)', false !== $mix_p && false !== $mix_g && $mix_p < $mix_g );
+	ahfcm_check( 'Page head at priority -5 prints before <title> (priority 1)', false === $mix_t || $mix_t > strpos( $html_mix, '<head' ) && $mix_p < $mix_t );
+	ahfcm_check( 'Page footer "just before </body>" is after global footer and last in <body>', (bool) preg_match( '#<!-- /AHFCM footer \(post ' . $page_a . '\) -->\s*</body>#', $html_mix ) && strpos( $html_mix, 'G-FOOT' ) < strpos( $html_mix, '<!-- P-FOOT -->' ) );
+	ahfcm_check( 'Mixed placements: tricky code still byte-exact, each once', false !== strpos( $html_mix, Settings::normalize_code( $tricky ) ) && 1 === ahfcm_count( $html_mix, 'P-HEAD' ) && 1 === ahfcm_count( $html_mix, '<!-- P-FOOT -->' ) );
+
+	// Same placement as before this test block: identical output order to 2.2.
+	update_option( Settings::OPTION, $place_g );
+	Settings::flush_cache();
+	$form_a['slots']['head']['placement']   = 'inherit';
+	$form_a['slots']['footer']['placement'] = 'inherit';
+	ahfcm_submit_meta_box( $page_a, $form_a );
+	$html_back = ahfcm_fetch( get_permalink( $page_a ) );
+	ahfcm_check( 'Back to defaults: global then page, both once', strpos( $html_back, 'content="G-HEAD"' ) < strpos( $html_back, 'P-HEAD' ) && 1 === ahfcm_count( $html_back, 'P-HEAD' ) );
+	$groups = ( new Injector() )->groups( 'head', $page_a );
+	ahfcm_check( 'Snippets sharing a priority print in one group', 1 === count( $groups ) && isset( $groups[ Settings::DEFAULT_PRIORITY ] ) );
+
+	// Settings page: the global position is saved from the Output tab only; the
+	// Global code cards show an unsubmitted copy kept in sync by editor.js.
+	require_once ABSPATH . 'wp-admin/includes/admin.php';
+	ob_start();
+	( new AHFCM\Admin\AdminPage() )->render();
+	$settings_html = ob_get_clean();
+	$named_ok      = true;
+	foreach ( array( 'head', 'footer' ) as $place_slot ) {
+		foreach ( array( 'placement', 'priority' ) as $place_key ) {
+			$named_ok = $named_ok && 1 === ahfcm_count( $settings_html, 'name="' . Settings::OPTION . '[slots][' . $place_slot . '][' . $place_key . ']"' );
+		}
+	}
+	ahfcm_check( 'Settings page submits each global position field exactly once (Output tab)', $named_ok );
+	ahfcm_check( 'Output tab and Global code card share a sync key per slot', 4 === ahfcm_count( $settings_html, 'data-ahfcm-sync="global-head"' ) && 4 === ahfcm_count( $settings_html, 'data-ahfcm-sync="global-footer"' ) );
 	$legacy_shape                               = Settings::get();
 	$legacy_shape['slots']['body_open']['html'] = '<!-- OLD-1.0-BODY -->';
 	update_option( Settings::OPTION, $legacy_shape );

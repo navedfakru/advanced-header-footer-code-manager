@@ -8,6 +8,7 @@
  * @var string $slot       Slot key.
  * @var array  $data       Slot data (html, css, js, enabled).
  * @var string $scope_note Scope reminder.
+ * @var string $context    global|global_mirror|post (see Fields::render_placement()).
  * @var array  $labels     Slot labels.
  * @var array  $languages  Part => label.
  *
@@ -15,6 +16,8 @@
  */
 
 defined( 'ABSPATH' ) || exit;
+
+use AHFCM\Editor\Fields;
 
 $ahfcm_slot_info = $labels[ $slot ];
 
@@ -58,6 +61,8 @@ $ahfcm_part_help = array(
 			<span class="ahfcm-switch__label"><?php esc_html_e( 'Enabled', 'advanced-header-footer-code-manager' ); ?></span>
 		</label>
 	</div>
+
+	<?php Fields::render_placement( $id, $name_base, $slot, $data, $context ); ?>
 
 	<div class="ahfcm-field__toolbar">
 		<div class="ahfcm-seg ahfcm-parts" role="tablist" aria-labelledby="<?php echo esc_attr( $id ); ?>-title">

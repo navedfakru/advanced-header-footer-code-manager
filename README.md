@@ -7,7 +7,7 @@ per page, or per **Breakdance / Oxygen** template, header, footer, popup or glob
 You edit the code in CodeMirror, with autocomplete, linting, formatting and a color picker,
 from the **block editor**, the **Breakdance / Oxygen builder**, or the settings app.
 
-- Version 2.2.1, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
+- Version 2.3.0, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
 - Integrations: Gutenberg (block editor), Breakdance 2+, Oxygen 6 (Oxygen Classic 4.x is not supported)
 - License: GPL-2.0-or-later. It bundles js-beautify 1.15.4 (MIT).
 
@@ -22,8 +22,24 @@ from the **block editor**, the **Breakdance / Oxygen builder**, or the settings 
 
 Breakdance and Oxygen print their CSS and JS at priority 1000000. The default 1000001
 puts your code after them, so equally specific CSS rules win and your scripts can use
-libraries that have already loaded. You can change the priorities under
-**Settings → Output**.
+libraries that have already loaded.
+
+### Position
+
+Every code card (global, page, template, header, footer, popup, global block) has a
+**Position** setting:
+
+| Position | Prints |
+|---|---|
+| **Same as global code** (pages and builder items only, the default) | wherever the global code of that slot prints (set under **Settings → Header & Footer Code → Output**, or on the Global code cards) |
+| **Just before `</head>`** / **Just before `</body>`** | last in `wp_head` / `wp_footer` (priority `PHP_INT_MAX`), after every theme, plugin and builder tag |
+| **Custom priority** | at the `wp_head` / `wp_footer` priority you enter (−99999999 to 99999999; lower runs earlier) |
+
+"Just before" relies on the theme or builder calling `wp_head()` / `wp_footer()` right
+before the closing tag, as WordPress requires and Breakdance and Oxygen do. The page is
+not output-buffered: Breakdance renders inside its own buffer, and a nested one would
+break it. Snippets with the same priority keep the order global → header → templates →
+footer → popups → global blocks → page.
 
 Each slot has **HTML · CSS · JS** tabs, and all three are used together. A slot prints
 its CSS first (inside `<style>`), then the HTML exactly as written, then the JS (inside
@@ -175,13 +191,15 @@ code panel swaps in the dark set in `assets/css/panel.css`. Icons live in
 
 | Data | Where |
 |---|---|
-| Global code + settings | option `ahfcm_global_settings` (autoloaded, schema version 3) |
+| Global code + settings | option `ahfcm_global_settings` (autoloaded, schema version 4) |
 | Last 5 global versions | option `ahfcm_global_history` |
 | Plugin version | option `ahfcm_version` |
 | Per-post / per-template code | post meta `_ahfcm_settings` (protected; stored with revisions) |
 
-2.2.x doesn't change any stored data. Data from 1.x carries over unchanged, and older
-formats are still converted when read.
+2.3.0 adds `placement` (and a per-page `priority`) to each code slot (schema 4). Existing
+code keeps printing where it did: global code keeps its priority and page code follows
+the global position. Data from 1.x and 2.x carries over, and older formats are still
+converted when read.
 
 ## Hooks
 
@@ -225,4 +243,5 @@ Deactivating never deletes anything. Deleting the plugin removes its data **only
 ## Rollback
 
 Version 1.1.1 is tagged in git history (commit `c53a23a`). Stored data is compatible in
-both directions between 1.1.1 and 2.2.1.
+both directions between 1.1.1 and 2.3.0; versions before 2.3.0 ignore the Position
+setting and print everything at the global priority.

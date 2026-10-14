@@ -94,7 +94,7 @@ use AHFCM\Editor\Fields;
 							<div class="ahfcm-grid">
 								<?php
 								foreach ( Settings::SLOTS as $ahfcm_slot ) {
-									Fields::render_slot( 'ahfcm-bd-global-' . $ahfcm_slot, 'global[slots][' . $ahfcm_slot . ']', $ahfcm_slot, $empty['slots'][ $ahfcm_slot ], __( 'Site-wide', 'advanced-header-footer-code-manager' ) );
+									Fields::render_slot( 'ahfcm-bd-global-' . $ahfcm_slot, 'global[slots][' . $ahfcm_slot . ']', $ahfcm_slot, $empty['slots'][ $ahfcm_slot ], __( 'Site-wide', 'advanced-header-footer-code-manager' ), 'global' );
 								}
 								?>
 							</div>

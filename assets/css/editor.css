@@ -208,6 +208,35 @@
 }
 .ahfcm-field__tools { display: flex; gap: 6px; }
 
+/* Position: placement select + priority */
+.ahfcm-place {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	padding: 0 16px 12px;
+}
+.ahfcm-place__label { color: var(--ahfcm-text-secondary); font-size: 12px; font-weight: 600; }
+.ahfcm-app .ahfcm-place select.ahfcm-place__select,
+.ahfcm-app .ahfcm-place input.ahfcm-place__number {
+	height: 30px;
+	min-height: 30px;
+	margin: 0;
+	border: 1px solid var(--ahfcm-border-strong);
+	border-radius: var(--ahfcm-radius-sm);
+	background-color: var(--ahfcm-bg-surface);
+	color: var(--ahfcm-text-primary);
+	font-size: 12px;
+	line-height: 28px;
+	box-shadow: none;
+}
+.ahfcm-app .ahfcm-place select.ahfcm-place__select { max-width: 100%; padding: 0 28px 0 10px; }
+.ahfcm-app .ahfcm-place input.ahfcm-place__number { width: 9.5em; padding: 0 8px; font-family: var(--ahfcm-font-mono); }
+.ahfcm-app .ahfcm-place select.ahfcm-place__select:focus,
+.ahfcm-app .ahfcm-place input.ahfcm-place__number:focus { border-color: var(--ahfcm-brand-primary); box-shadow: 0 0 0 1px var(--ahfcm-brand-primary); outline: none; }
+.ahfcm-place__prio[hidden] { display: none; }
+.ahfcm-place__hint { flex: 1 0 100%; margin: 0; color: var(--ahfcm-text-secondary); font-size: 12px; }
+
 /* Segmented language picker */
 .ahfcm-seg {
 	display: inline-flex;

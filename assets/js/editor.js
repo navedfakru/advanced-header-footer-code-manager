@@ -886,6 +886,12 @@
 			$tabs.eq( next ).trigger( 'click' ).trigger( 'focus' );
 		} );
 
+		// In-page links to another tab ("Edit global positions").
+		$( '[data-ahfcm-goto]' ).on( 'click', function ( e ) {
+			e.preventDefault();
+			$tabs.filter( '[data-ahfcm-tab="' + this.getAttribute( 'data-ahfcm-goto' ) + '"]' ).trigger( 'click' ).trigger( 'focus' );
+		} );
+
 		show( ( window.location.hash || '#code' ).slice( 1 ) );
 
 		// Announce the save result (the settings page reloads after saving).
@@ -894,6 +900,45 @@
 			wp.a11y.speak( $notice.text().trim(), $notice.hasClass( 'notice-error' ) ? 'assertive' : 'polite' );
 		}
 	}
+
+	/* ---------- Position (placement) ---------- */
+
+	/** Shows the priority box only for "Custom priority" and updates the hint. */
+	function syncPlacement( select ) {
+		var place = select && select.closest( '[data-ahfcm-place]' );
+		if ( ! place ) {
+			return;
+		}
+		var option = select.options[ select.selectedIndex ];
+		var wrap = place.querySelector( '[data-ahfcm-priority-wrap]' );
+		var hint = place.querySelector( '[data-ahfcm-place-hint]' );
+		if ( wrap ) {
+			wrap.hidden = select.value !== 'priority';
+		}
+		if ( hint && option ) {
+			hint.textContent = option.getAttribute( 'data-hint' ) || '';
+		}
+	}
+
+	$( document ).on( 'change', '[data-ahfcm-placement]', function () {
+		syncPlacement( this );
+	} );
+
+	// The global position is shown on the Output tab (saved) and on the
+	// Global code cards (copy): changing one updates the other.
+	$( document ).on( 'change input', '[data-ahfcm-sync]', function () {
+		var source = this;
+		var key = source.getAttribute( 'data-ahfcm-sync' );
+		$( '[data-ahfcm-sync="' + key + '"]' ).each( function () {
+			if ( this === source || this.tagName !== source.tagName || this.value === source.value ) {
+				return;
+			}
+			this.value = source.value;
+			if ( this.hasAttribute( 'data-ahfcm-placement' ) ) {
+				syncPlacement( this );
+			}
+		} );
+	} );
 
 	/* ---------- Boot ---------- */
 
@@ -960,6 +1005,12 @@
 	 * Public API for dynamically rendered editors (Breakdance builder panel).
 	 */
 	window.AHFCMEditor = {
+		/**
+		 * Refreshes a Position control after its value is set from script.
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
+		syncPlacement: syncPlacement,
 		/**
 		 * Creates editors for every field inside root.
 		 *

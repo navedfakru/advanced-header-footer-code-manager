@@ -11,7 +11,9 @@
  *         css                  string Raw CSS (output inside <style>).
  *         js                   string Raw JavaScript (output inside <script>).
  *         enabled              bool
- *         priority             int    Hook priority.
+ *         placement            string priority (use `priority`) | end (last in
+ *                                     wp_head / wp_footer, right before </head> / </body>).
+ *         priority             int    Hook priority when placement is `priority`.
  *     (Schema 1–2 stored one `code` + `language`; normalize_slot() converts it on read.)
  *
  *     editor_theme             string dark|light
@@ -45,7 +47,7 @@ final class Settings {
 	const OPTION         = 'ahfcm_global_settings';
 	const HISTORY_OPTION = 'ahfcm_global_history';
 	const GROUP          = 'ahfcm_settings';
-	const SCHEMA_VERSION = 3;
+	const SCHEMA_VERSION = 4;
 
 	/**
 	 * Default hook priority: right after page-builder assets.
@@ -59,6 +61,22 @@ final class Settings {
 
 	/** Allowed priority range. */
 	const MAX_PRIORITY = 99999999;
+
+	/**
+	 * Placement of a code slot.
+	 *
+	 * PLACEMENT_PRIORITY: printed at the slot's own hook priority.
+	 * PLACEMENT_END:      printed last in wp_head / wp_footer (END_PRIORITY),
+	 *                     i.e. right before </head> / </body> in themes and
+	 *                     builders that call wp_head() / wp_footer() there.
+	 * PLACEMENT_INHERIT:  per-page code only; follows the global slot.
+	 */
+	const PLACEMENT_PRIORITY = 'priority';
+	const PLACEMENT_END      = 'end';
+	const PLACEMENT_INHERIT  = 'inherit';
+
+	/** Hook priority used for PLACEMENT_END. */
+	const END_PRIORITY = PHP_INT_MAX;
 
 	const HISTORY_LIMIT = 5;
 
@@ -131,8 +149,9 @@ final class Settings {
 			'html'     => '',
 			'css'      => '',
 			'js'       => '',
-			'enabled'  => true,
-			'priority' => isset( $priorities[ $slot ] ) ? $priorities[ $slot ] : self::DEFAULT_PRIORITY,
+			'enabled'   => true,
+			'placement' => self::PLACEMENT_PRIORITY,
+			'priority'  => isset( $priorities[ $slot ] ) ? $priorities[ $slot ] : self::DEFAULT_PRIORITY,
 		);
 	}
 
@@ -267,6 +286,26 @@ final class Settings {
 	}
 
 	/**
+	 * Hook priority a slot prints at.
+	 *
+	 * @param array      $slot        Normalized slot (global or per-page).
+	 * @param array|null $global_slot Global slot of the same location, used
+	 *                                when `$slot` follows the global placement.
+	 * @return int
+	 */
+	public static function slot_priority( array $slot, $global_slot = null ) {
+		$placement = isset( $slot['placement'] ) ? $slot['placement'] : self::PLACEMENT_INHERIT;
+		if ( self::PLACEMENT_INHERIT === $placement ) {
+			$slot      = is_array( $global_slot ) ? $global_slot : array();
+			$placement = isset( $slot['placement'] ) ? $slot['placement'] : self::PLACEMENT_PRIORITY;
+		}
+		if ( self::PLACEMENT_END === $placement ) {
+			return self::END_PRIORITY;
+		}
+		return isset( $slot['priority'] ) ? (int) $slot['priority'] : self::DEFAULT_PRIORITY;
+	}
+
+	/**
 	 * Whether an integration is switched on (on unless explicitly turned off).
 	 *
 	 * @param string $name Integration name, e.g. breakdance.
@@ -280,9 +319,11 @@ final class Settings {
 	/**
 	 * Normalizes one slot. Shared with per-post settings.
 	 *
+	 * `placement` and `priority` are kept when the defaults carry them.
+	 *
 	 * @param array $raw           Raw slot.
 	 * @param array $defaults      Defaults for the slot.
-	 * @param bool  $with_priority Whether the slot carries a hook priority.
+	 * @param bool  $with_priority Always keep a hook priority.
 	 * @return array
 	 */
 	public static function normalize_slot( array $raw, array $defaults, $with_priority = false ) {
@@ -305,7 +346,15 @@ final class Settings {
 
 		$slot['enabled'] = self::to_bool( isset( $raw['enabled'] ) ? $raw['enabled'] : $defaults['enabled'] );
 
-		if ( $with_priority ) {
+		if ( isset( $defaults['placement'] ) ) {
+			// Per-page slots may follow the global slot; global slots may not.
+			$allowed           = self::PLACEMENT_INHERIT === $defaults['placement']
+				? array( self::PLACEMENT_INHERIT, self::PLACEMENT_PRIORITY, self::PLACEMENT_END )
+				: array( self::PLACEMENT_PRIORITY, self::PLACEMENT_END );
+			$slot['placement'] = isset( $raw['placement'] ) && in_array( $raw['placement'], $allowed, true ) ? $raw['placement'] : $defaults['placement'];
+		}
+
+		if ( $with_priority || isset( $defaults['priority'] ) ) {
 			$priority         = isset( $raw['priority'] ) && is_numeric( $raw['priority'] ) ? (int) $raw['priority'] : $defaults['priority'];
 			$slot['priority'] = max( -self::MAX_PRIORITY, min( self::MAX_PRIORITY, $priority ) );
 		}
@@ -426,7 +475,7 @@ final class Settings {
 	private static function code_fingerprint( array $settings ) {
 		$slots = array();
 		foreach ( $settings['slots'] as $key => $slot ) {
-			unset( $slot['priority'] );
+			unset( $slot['priority'], $slot['placement'] );
 			$slots[ $key ] = $slot;
 		}
 		return md5( wp_json_encode( array( $settings['enabled'], $slots ) ) );

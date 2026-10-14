@@ -3,7 +3,7 @@
  * Plugin Name:       Advanced Header & Footer Code Manager
  * Plugin URI:        https://github.com/navedfakru/advanced-header-footer-code-manager
  * Description:       Add trusted HTML, CSS and JavaScript to &lt;head&gt; and before &lt;/body&gt; — site-wide, per page, or per Breakdance/Oxygen template — with a CodeMirror editor, linting, autocomplete and formatting. Works in the block editor, Breakdance and Oxygen.
- * Version:           2.2.1
+ * Version:           2.3.0
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            Naved
