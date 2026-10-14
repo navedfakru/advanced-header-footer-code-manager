@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Advanced Header & Footer Code Manager 1.1.1\n"
+"Project-Id-Version: Advanced Header & Footer Code Manager 2.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/advanced-header-footer-code-manager\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-14T16:33:16+00:00\n"
+"POT-Creation-Date: 2026-10-14T18:00:11+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: advanced-header-footer-code-manager\n"
@@ -19,9 +19,14 @@ msgstr ""
 msgid "Advanced Header & Footer Code Manager"
 msgstr ""
 
+#. Plugin URI of the plugin
+#: advanced-header-footer-code-manager.php
+msgid "https://github.com/navedfakru/advanced-header-footer-code-manager"
+msgstr ""
+
 #. Description of the plugin
 #: advanced-header-footer-code-manager.php
-msgid "Add trusted code to &lt;head&gt; and before &lt;/body&gt; — site-wide or per post/page — with a CodeMirror editor, linting, autocomplete and formatting."
+msgid "Add trusted HTML, CSS and JavaScript to &lt;head&gt; and before &lt;/body&gt; — site-wide, per page, or per Breakdance/Oxygen template — with a CodeMirror editor, linting, autocomplete and formatting. Works in the block editor, Breakdance and Oxygen."
 msgstr ""
 
 #. Author of the plugin
@@ -29,751 +34,822 @@ msgstr ""
 msgid "Naved"
 msgstr ""
 
-#: admin/class-admin.php:49
-#: admin/class-admin.php:50
-#: admin/class-admin.php:171
-#: admin/views/builder-panel.php:25
-#: admin/views/settings-page.php:34
-#: includes/class-breakdance.php:497
+#: src/Admin/AdminPage.php:64
+#: src/Admin/AdminPage.php:65
+#: src/Editor/Panel.php:78
+#: src/Integration/Gutenberg/Editor.php:102
+#: views/admin/app.php:48
+#: views/editor/panel.php:26
 msgid "Header & Footer Code"
 msgstr ""
 
-#: admin/class-admin.php:67
-#: admin/views/settings-page.php:60
+#: src/Admin/AdminPage.php:80
 msgid "Settings"
 msgstr ""
 
-#: admin/class-admin.php:97
-msgid "Header & Body Code Embed"
-msgstr ""
-
-#: admin/class-admin.php:203
+#: src/Admin/AdminPage.php:106
 msgid "Sorry, you are not allowed to manage header and footer code."
 msgstr ""
 
-#: admin/class-admin.php:227
-msgid "post"
-msgstr ""
-
-#: admin/class-admin.php:253
-#: admin/class-admin.php:286
+#: src/Admin/AdminPage.php:188
 msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
-#: admin/views/builder-panel.php:29
-#: includes/class-breakdance.php:510
-msgid "This page"
+#: src/Admin/LegacyImport.php:122
+msgid "Contains backslashes. The old plugin removed them on output; this plugin outputs code exactly as stored. Review before enabling."
 msgstr ""
 
-#: admin/views/builder-panel.php:32
-msgid "Global"
+#: src/Admin/LegacyImport.php:125
+msgid "Post type is not enabled for per-post code; the imported code will not run until it is."
 msgstr ""
 
-#: admin/views/builder-panel.php:37
-msgid "Save (Ctrl+S)"
+#: src/Admin/LegacyImport.php:176
+msgid "Will be imported"
 msgstr ""
 
-#: admin/views/builder-panel.php:37
-msgid "Save"
+#: src/Admin/LegacyImport.php:177
+msgid "Will be enabled"
 msgstr ""
 
-#: admin/views/builder-panel.php:38
-msgid "Close"
+#: src/Admin/LegacyImport.php:178
+msgid "Imported"
 msgstr ""
 
-#: admin/views/builder-panel.php:38
-msgid "Close (Esc)"
-msgstr ""
-
-#: admin/views/builder-panel.php:47
-msgid "Code is not enabled for this content type. Turn it on under Settings → Header & Footer Code → Settings (“Per-page code on” or “Breakdance templates”), or use the Global tab."
-msgstr ""
-
-#: admin/views/builder-panel.php:55
-msgid "Custom code on this page"
-msgstr ""
-
-#: admin/views/builder-panel.php:61
-#: admin/views/meta-box.php:46
-msgid "Skip global code"
-msgstr ""
-
-#: admin/views/builder-panel.php:65
-#: admin/views/builder-panel.php:92
-msgid "Switched OFF: none of the code below is loaded. Turn on the first switch to load it."
-msgstr ""
-
-#: admin/views/builder-panel.php:69
-#: includes/class-breakdance.php:515
-msgid "This page only"
-msgstr ""
-
-#: admin/views/builder-panel.php:85
-msgid "Global code enabled"
-msgstr ""
-
-#: admin/views/builder-panel.php:88
-msgid "Runs on every page of the site."
-msgstr ""
-
-#: admin/views/builder-panel.php:89
-msgid "All settings ↗"
-msgstr ""
-
-#: admin/views/builder-panel.php:96
-#: admin/views/settings-page.php:95
-msgid "Site-wide"
-msgstr ""
-
-#: admin/views/builder-panel.php:107
-msgid "Code runs on the live site exactly as written. Only paste code you trust."
-msgstr ""
-
-#: admin/views/editor-field.php:30
-msgid "HTML is output exactly as written: tags, <script src>, <link>, <meta>, JSON-LD…"
-msgstr ""
-
-#: admin/views/editor-field.php:31
-msgid "Plain CSS, wrapped in <style> for you. Printed before the HTML."
-msgstr ""
-
-#: admin/views/editor-field.php:32
-msgid "Plain JavaScript, wrapped in <script> for you. Printed after the HTML."
-msgstr ""
-
-#: admin/views/editor-field.php:58
-#: includes/class-migration.php:176
+#: src/Admin/LegacyImport.php:179
+#: views/editor/slot.php:58
 msgid "Enabled"
 msgstr ""
 
-#: admin/views/editor-field.php:76
-msgid "Format code (Shift+Alt+F)"
+#: src/Admin/LegacyImport.php:180
+msgid "Already imported"
 msgstr ""
 
-#: admin/views/editor-field.php:78
-msgid "Format"
+#: src/Admin/LegacyImport.php:181
+msgid "Skipped: slot already has different code"
 msgstr ""
 
-#: admin/views/editor-field.php:80
-#: includes/class-ui.php:112
+#: src/Admin/LegacyImport.php:182
+msgid "Failed: verification mismatch"
+msgstr ""
+
+#: src/Admin/MetaBox.php:65
+msgid "Header & Body Code Embed"
+msgstr ""
+
+#: src/Admin/MetaBox.php:95
+msgid "post"
+msgstr ""
+
+#: src/Api/Rest.php:106
+msgid "Not saved: this panel was loaded before the plugin was updated. Reload the page and make your changes again."
+msgstr ""
+
+#: src/Api/Rest.php:169
+msgid "Per-page code is not enabled for this content type."
+msgstr ""
+
+#: src/Core/PostMeta.php:87
+msgid "Header, body and footer code for this post."
+msgstr ""
+
+#: src/Core/Settings.php:212
+msgid "Not saved: this page was opened before the plugin was updated. Reload the page and make your changes again."
+msgstr ""
+
+#: src/Editor/Assets.php:127
+msgid "Code formatted."
+msgstr ""
+
+#: src/Editor/Assets.php:128
+msgid "Code is already formatted."
+msgstr ""
+
+#: src/Editor/Assets.php:129
+msgid "Nothing to format."
+msgstr ""
+
+#: src/Editor/Assets.php:130
+msgid "The formatter did not load, so the code was not changed."
+msgstr ""
+
+#: src/Editor/Assets.php:131
+msgid "Formatting was cancelled because it would change more than whitespace. Your code was not modified."
+msgstr ""
+
+#: src/Editor/Assets.php:132
+msgid "This snippet contains PHP tags. PHP is not formatted or executed; the code was not changed."
+msgstr ""
+
+#. translators: %s: error message from the formatter.
+#: src/Editor/Assets.php:134
+#, php-format
+msgid "The formatter failed: %s. Your code was not modified."
+msgstr ""
+
+#: src/Editor/Assets.php:135
+msgid "No problems found"
+msgstr ""
+
+#. translators: 1: number of errors, 2: number of warnings.
+#: src/Editor/Assets.php:137
+#, php-format
+msgid "%1$d error(s), %2$d warning(s)"
+msgstr ""
+
+#: src/Editor/Assets.php:138
+msgid "You have unsaved code changes."
+msgstr ""
+
+#. translators: %s: language name.
+#: src/Editor/Assets.php:140
+#, php-format
+msgid "Editor language changed to %s."
+msgstr ""
+
+#: src/Editor/Assets.php:141
+msgid "Exit full screen"
+msgstr ""
+
+#: src/Editor/Assets.php:142
+#: views/editor/slot.php:80
 msgid "Full screen"
 msgstr ""
 
-#: admin/views/editor-field.php:80
-msgid "Full screen (F11)"
-msgstr ""
-
-#. translators: %s: post type name, e.g. "page".
-#: admin/views/meta-box.php:25
+#. translators: 1: line number, 2: column number.
+#: src/Editor/Assets.php:144
 #, php-format
-msgid "This %s only"
+msgid "Ln %1$d, Col %2$d"
 msgstr ""
 
-#. translators: %s: post type name.
+#. translators: %d: number of lines.
+#: src/Editor/Assets.php:146
+#, php-format
+msgid "%d lines"
+msgstr ""
+
+#: src/Editor/Assets.php:148
+msgid "Pick color"
+msgstr ""
+
+#: src/Editor/Assets.php:149
+msgid "Hue"
+msgstr ""
+
+#: src/Editor/Assets.php:150
+msgid "Opacity"
+msgstr ""
+
+#: src/Editor/Assets.php:151
+msgid "Saturation and brightness"
+msgstr ""
+
+#: src/Editor/Assets.php:152
+msgid "Color value"
+msgstr ""
+
+#: src/Editor/Assets.php:153
+msgid "Pick from screen"
+msgstr ""
+
+#: src/Editor/Assets.php:155
+msgid "PHP tags are not executed; they will be sent to the browser as text."
+msgstr ""
+
+#: src/Editor/Assets.php:156
+msgid "This tab wraps your code in <style> or <script> for you. Remove the tags here, or move tag-based code to the HTML tab."
+msgstr ""
+
+#: src/Editor/Assets.php:157
+msgid "This looks like plain CSS or JavaScript. Put it in the CSS or JS tab, or wrap it in <style> / <script>."
+msgstr ""
+
+#: src/Editor/Fields.php:25
+msgid "HTML"
+msgstr ""
+
+#: src/Editor/Fields.php:26
+msgid "CSS"
+msgstr ""
+
+#: src/Editor/Fields.php:27
+msgid "JS"
+msgstr ""
+
+#: src/Editor/Fields.php:39
+msgid "Header Code"
+msgstr ""
+
+#: src/Editor/Fields.php:41
+msgid "Printed by wp_head, before </head>. Meta and verification tags, analytics loaders, preload hints, CSS."
+msgstr ""
+
+#: src/Editor/Fields.php:44
+msgid "Footer Code"
+msgstr ""
+
+#: src/Editor/Fields.php:46
+msgid "Printed by wp_footer, after footer scripts and before </body>. Chat widgets, tag-manager noscript, scripts that need the page loaded."
+msgstr ""
+
+#: src/Editor/Panel.php:79
+msgid "Loading…"
+msgstr ""
+
+#: src/Editor/Panel.php:80
+msgid "Saving…"
+msgstr ""
+
+#: src/Editor/Panel.php:81
+#: views/admin/sections/tools.php:95
+msgid "Saved"
+msgstr ""
+
+#: src/Editor/Panel.php:82
+#: views/admin/app.php:64
+msgid "Unsaved changes"
+msgstr ""
+
+#. translators: %s: error message.
+#: src/Editor/Panel.php:84
+#, php-format
+msgid "Could not save: %s"
+msgstr ""
+
+#. translators: %s: error message.
+#: src/Editor/Panel.php:86
+#, php-format
+msgid "Could not load code: %s"
+msgstr ""
+
+#: src/Editor/Panel.php:87
+msgid "You have unsaved code changes. Close anyway?"
+msgstr ""
+
+#. translators: 1: post type name, 2: post title.
+#: src/Editor/Panel.php:89
+#, php-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#: src/Editor/Panel.php:90
+#: views/editor/panel.php:30
+msgid "This page"
+msgstr ""
+
+#. translators: %s: builder document type, e.g. "template".
+#: src/Editor/Panel.php:92
+#, php-format
+msgid "This %s"
+msgstr ""
+
 #. translators: %s: content type, e.g. "page" or "template".
-#: admin/views/meta-box.php:37
-#: includes/class-breakdance.php:514
+#. translators: %s: post type name.
+#: src/Editor/Panel.php:94
+#: views/admin/meta-box.php:38
 #, php-format
 msgid "Custom code on this %s"
 msgstr ""
 
-#: admin/views/meta-box.php:52
-msgid "Global code is paused site-wide."
+#: src/Editor/Panel.php:95
+#: views/editor/panel.php:70
+msgid "This page only"
 msgstr ""
 
-#: admin/views/meta-box.php:54
-msgid "Runs after global code."
+#. translators: %s: builder document type, e.g. "template".
+#: src/Editor/Panel.php:97
+#, php-format
+msgid "Every page using this %s"
 msgstr ""
 
-#: admin/views/meta-box.php:57
-msgid "Edit global code →"
+#: src/Integration/Breakdance/Main.php:71
+msgid "Code on templates, headers, footers, popups and global blocks, plus a code button in the builder top bar."
 msgstr ""
 
-#: admin/views/meta-box.php:64
-msgid "Custom code is switched OFF for this item, so none of the code below is loaded. Turn on the first switch above to load it."
+#: src/Integration/Breakdance/Main.php:93
+msgid "Templates"
 msgstr ""
 
-#: admin/views/meta-box.php:83
-msgid "Code is output exactly as written and runs for every visitor of this page. Only paste code you trust."
+#: src/Integration/Breakdance/Main.php:94
+msgid "Headers"
 msgstr ""
 
-#: admin/views/settings-page.php:35
-msgid "Add scripts, styles and tags to every page — or to a single page from its editor."
+#: src/Integration/Breakdance/Main.php:95
+msgid "Footers"
 msgstr ""
 
-#: admin/views/settings-page.php:39
-msgid "Live"
+#: src/Integration/Breakdance/Main.php:96
+msgid "Popups"
 msgstr ""
 
-#: admin/views/settings-page.php:39
-msgid "Not running"
+#: src/Integration/Breakdance/Main.php:97
+msgid "Global Blocks"
 msgstr ""
 
-#: admin/views/settings-page.php:47
-msgid "Previous version restored. The version it replaced was added to the history."
+#: src/Integration/Gutenberg/Main.php:31
+msgid "Block editor"
 msgstr ""
 
-#: admin/views/settings-page.php:49
-msgid "That history entry no longer exists."
+#: src/Integration/Gutenberg/Main.php:38
+msgid "A code icon in the block editor toolbar (next to “Edit in Breakdance/Oxygen”) opens the code panel for the page."
 msgstr ""
 
-#: admin/views/settings-page.php:54
-msgid "The legacy \"Page Header & Body Code Embed\" snippet (WPCodeBox) is still active and keeps printing its own per-page code. Avoid enabling the same code in both places — see Tools."
+#: src/Integration/Oxygen/Main.php:52
+msgid "Oxygen 6: code on templates, headers, footers, popups and blocks, plus a code button in the builder top bar."
 msgstr ""
 
-#: admin/views/settings-page.php:58
-msgid "Sections"
-msgstr ""
-
-#: admin/views/settings-page.php:59
-msgid "Code"
-msgstr ""
-
-#: admin/views/settings-page.php:61
-msgid "Tools"
-msgstr ""
-
-#: admin/views/settings-page.php:62
-msgid "Help"
-msgstr ""
-
-#: admin/views/settings-page.php:76
+#: views/admin/app.php:32
+#: views/admin/sections/code.php:18
+#: views/admin/sections/code.php:28
 msgid "Global code"
 msgstr ""
 
-#: admin/views/settings-page.php:77
-msgid "Pause everything below without deleting it."
+#: views/admin/app.php:33
+#: views/admin/sections/integrations.php:41
+msgid "Integrations"
 msgstr ""
 
-#: admin/views/settings-page.php:82
-msgid "Runs on every page, exactly as written. Only paste code you trust."
-msgstr ""
-
-#: admin/views/settings-page.php:86
-msgid "Global code is switched OFF, so none of the code below is loaded on any page. Turn on \"Global code\" above to load it."
-msgstr ""
-
-#: admin/views/settings-page.php:104
-msgid "Editor"
-msgstr ""
-
-#: admin/views/settings-page.php:107
-msgid "Theme"
-msgstr ""
-
-#: admin/views/settings-page.php:110
-msgid "Dark"
-msgstr ""
-
-#: admin/views/settings-page.php:111
-msgid "Light"
-msgstr ""
-
-#: admin/views/settings-page.php:118
-msgid "Height"
-msgstr ""
-
-#: admin/views/settings-page.php:119
-msgid "Drag the bottom edge of any editor to resize it."
-msgstr ""
-
-#: admin/views/settings-page.php:128
+#: views/admin/app.php:34
+#: views/admin/sections/output.php:16
 msgid "Output"
 msgstr ""
 
-#: admin/views/settings-page.php:132
-msgid "Per-page code on"
+#: views/admin/app.php:35
+#: views/admin/sections/editor.php:15
+msgid "Editor"
 msgstr ""
 
-#: admin/views/settings-page.php:133
-msgid "Content types that get the \"Header & Body Code Embed\" box."
+#: views/admin/app.php:36
+#: views/admin/sections/tools.php:21
+msgid "Tools"
 msgstr ""
 
-#: admin/views/settings-page.php:152
-msgid "Breakdance templates"
+#: views/admin/app.php:37
+#: views/admin/sections/help.php:14
+msgid "Help"
 msgstr ""
 
-#: admin/views/settings-page.php:153
-msgid "Give these their own code, edited from the builder. It runs on every page that uses the template, header, footer or popup."
+#. translators: %s: plugin version.
+#: views/admin/app.php:52
+#, php-format
+msgid "Version %s"
 msgstr ""
 
-#: admin/views/settings-page.php:171
-msgid "Hook priority"
+#: views/admin/app.php:60
+msgid "Global code live"
 msgstr ""
 
-#: admin/views/settings-page.php:172
-msgid "Lower runs earlier. Default 1000001 puts your code at the very end of <head> and <body>, after theme and Breakdance CSS/JS, so your styles win and scripts can use loaded libraries. Use a low number (e.g. 1) for tags that must load first."
+#: views/admin/app.php:60
+msgid "Global code not running"
 msgstr ""
 
-#: admin/views/settings-page.php:183
-msgid "Run inside page builders"
-msgstr ""
-
-#: admin/views/settings-page.php:184
-msgid "Off by default so analytics and chat widgets do not fire while you design in Breakdance, Oxygen or Elementor."
-msgstr ""
-
-#: admin/views/settings-page.php:187
-msgid "HTML comment markers"
-msgstr ""
-
-#: admin/views/settings-page.php:188
-msgid "Wraps each snippet in <!-- AHFCM … --> comments so you can find it in View Source."
-msgstr ""
-
-#: admin/views/settings-page.php:214
-msgid "Toolbar buttons"
-msgstr ""
-
-#: admin/views/settings-page.php:218
-#: admin/views/settings-page.php:224
-msgid "Show the button in the WordPress editor"
-msgstr ""
-
-#: admin/views/settings-page.php:219
-msgid "A code icon in the block editor top bar (next to \"Edit in Breakdance\"). It jumps to this page's Header & Body Code Embed box."
-msgstr ""
-
-#: admin/views/settings-page.php:233
-#: admin/views/settings-page.php:239
-msgid "Show the button in the builder"
-msgstr ""
-
-#: admin/views/settings-page.php:234
-msgid "The code icon next to the properties button in the Breakdance top bar. Turning it off only hides the button — code keeps running and can still be edited here and in the WordPress editor."
-msgstr ""
-
-#: admin/views/settings-page.php:249
-msgid "Show for these roles"
-msgstr ""
-
-#: admin/views/settings-page.php:250
-msgid "Applies to both buttons. Only roles allowed to add raw code are listed; other roles never see them."
-msgstr ""
-
-#: admin/views/settings-page.php:267
-msgid "Hide for these users"
-msgstr ""
-
-#: admin/views/settings-page.php:268
-msgid "Ticked users never see either button, whatever their role."
-msgstr ""
-
-#: admin/views/settings-page.php:280
-msgid "(you)"
-msgstr ""
-
-#: admin/views/settings-page.php:287
-msgid "No users can add raw code."
-msgstr ""
-
-#: admin/views/settings-page.php:294
-msgid "Uninstall"
-msgstr ""
-
-#: admin/views/settings-page.php:297
-#: admin/views/settings-page.php:303
-msgid "Delete data when the plugin is deleted"
-msgstr ""
-
-#: admin/views/settings-page.php:298
-msgid "Permanently removes all global and per-page code. Deactivating never deletes anything."
-msgstr ""
-
-#: admin/views/settings-page.php:312
-#: includes/class-breakdance.php:501
-msgid "Unsaved changes"
-msgstr ""
-
-#: admin/views/settings-page.php:313
+#: views/admin/app.php:65
 msgid "Save changes"
 msgstr ""
 
-#: admin/views/settings-page.php:319
+#: views/admin/app.php:72
+msgid "Sections"
+msgstr ""
+
+#: views/admin/app.php:80
+msgid "Docs & changelog ↗"
+msgstr ""
+
+#: views/admin/app.php:87
+msgid "Previous version restored. The version it replaced was added to the history."
+msgstr ""
+
+#: views/admin/app.php:89
+msgid "That history entry no longer exists."
+msgstr ""
+
+#: views/admin/app.php:92
+msgid "The legacy \"Page Header & Body Code Embed\" snippet (WPCodeBox) is still active and keeps printing its own per-page code. Avoid enabling the same code in both places — see Tools."
+msgstr ""
+
+#. translators: %s: post type name, e.g. "page".
+#: views/admin/meta-box.php:26
+#, php-format
+msgid "This %s only"
+msgstr ""
+
+#: views/admin/meta-box.php:47
+#: views/editor/panel.php:62
+msgid "Skip global code"
+msgstr ""
+
+#: views/admin/meta-box.php:53
+msgid "Global code is paused site-wide."
+msgstr ""
+
+#: views/admin/meta-box.php:55
+msgid "Runs after global code."
+msgstr ""
+
+#: views/admin/meta-box.php:58
+msgid "Edit global code →"
+msgstr ""
+
+#: views/admin/meta-box.php:65
+msgid "Custom code is switched OFF for this item, so none of the code below is loaded. Turn on the first switch above to load it."
+msgstr ""
+
+#: views/admin/meta-box.php:84
+msgid "Code is output exactly as written and runs for every visitor of this page. Only paste code you trust."
+msgstr ""
+
+#: views/admin/sections/code.php:19
+msgid "Runs on every page of the site. Pages, templates and global blocks can add their own code from their editor."
+msgstr ""
+
+#: views/admin/sections/code.php:29
+msgid "Pause everything below without deleting it."
+msgstr ""
+
+#: views/admin/sections/code.php:34
+msgid "Output exactly as written. Only paste code you trust."
+msgstr ""
+
+#: views/admin/sections/code.php:38
+msgid "Global code is switched OFF, so none of the code below is loaded on any page. Turn on \"Global code\" above to load it."
+msgstr ""
+
+#: views/admin/sections/code.php:42
+#: views/editor/panel.php:97
+msgid "Site-wide"
+msgstr ""
+
+#: views/admin/sections/editor.php:16
+msgid "How the code editors look, and what happens to your data on uninstall."
+msgstr ""
+
+#: views/admin/sections/editor.php:21
+msgid "Theme"
+msgstr ""
+
+#: views/admin/sections/editor.php:24
+msgid "Dark"
+msgstr ""
+
+#: views/admin/sections/editor.php:25
+msgid "Light"
+msgstr ""
+
+#: views/admin/sections/editor.php:32
+msgid "Height"
+msgstr ""
+
+#: views/admin/sections/editor.php:33
+msgid "Starting height. Drag the bottom edge of any editor to resize it."
+msgstr ""
+
+#: views/admin/sections/editor.php:42
+msgid "Uninstall"
+msgstr ""
+
+#: views/admin/sections/editor.php:45
+#: views/admin/sections/editor.php:51
+msgid "Delete data when the plugin is deleted"
+msgstr ""
+
+#: views/admin/sections/editor.php:46
+msgid "Permanently removes all global and per-page code. Deactivating never deletes anything."
+msgstr ""
+
+#: views/admin/sections/help.php:15
+msgid "How code is placed, and the editor’s keyboard shortcuts."
+msgstr ""
+
+#: views/admin/sections/help.php:20
+msgid "How it works"
+msgstr ""
+
+#: views/admin/sections/help.php:25
+msgid "Each slot has HTML, CSS and JS tabs, all used together: CSS (in <style>), then HTML as written, then JS (in <script>). PHP is never executed."
+msgstr ""
+
+#: views/admin/sections/help.php:26
+msgid "Order on a page: global code, then Breakdance/Oxygen header, template, footer, popups and global blocks, then the page itself. A page or template can skip global code."
+msgstr ""
+
+#: views/admin/sections/help.php:27
+msgid "Edit page code from the code icon in the block editor toolbar, the code button in the Breakdance/Oxygen top bar, or the \"Header & Body Code Embed\" box in the Classic editor."
+msgstr ""
+
+#: views/admin/sections/help.php:32
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: views/admin/sections/help.php:34
+msgid "Autocomplete"
+msgstr ""
+
+#: views/admin/sections/help.php:35
+msgid "Search"
+msgstr ""
+
+#: views/admin/sections/help.php:36
+msgid "Search and replace"
+msgstr ""
+
+#: views/admin/sections/help.php:37
+msgid "Jump to line"
+msgstr ""
+
+#: views/admin/sections/help.php:38
+msgid "Toggle comment"
+msgstr ""
+
+#: views/admin/sections/help.php:39
+msgid "Fold / unfold block"
+msgstr ""
+
+#: views/admin/sections/help.php:40
+msgid "Format code"
+msgstr ""
+
+#: views/admin/sections/help.php:41
+msgid "Save (in the panel)"
+msgstr ""
+
+#: views/admin/sections/help.php:42
+msgid "Full screen (Esc exits)"
+msgstr ""
+
+#: views/admin/sections/help.php:43
+msgid "Move focus out of the editor"
+msgstr ""
+
+#: views/admin/sections/help.php:45
+msgid "Linting (HTMLHint, CSSLint, Espree) catches common mistakes but cannot prove code is correct or safe. Autocomplete suggests tags, attributes, properties and keywords — it is not full IntelliSense. Format only applies when the result differs in whitespace alone."
+msgstr ""
+
+#: views/admin/sections/integrations.php:42
+msgid "Detected automatically. Switch an integration off to stop all of its features without uninstalling anything."
+msgstr ""
+
+#: views/admin/sections/integrations.php:59
+msgid "Detected"
+msgstr ""
+
+#: views/admin/sections/integrations.php:59
+msgid "Not installed"
+msgstr ""
+
+#: views/admin/sections/integrations.php:69
+#: views/admin/sections/integrations.php:72
+msgid "Toolbar icon"
+msgstr ""
+
+#: views/admin/sections/integrations.php:70
+msgid "Code icon in the editor top bar. While shown, it replaces the \"Header & Body Code Embed\" box in the block editor (the box stays in the Classic editor)."
+msgstr ""
+
+#: views/admin/sections/integrations.php:79
+#: views/admin/sections/integrations.php:87
+msgid "Builder button"
+msgstr ""
+
+#. translators: %s: builder name.
+#: views/admin/sections/integrations.php:83
+#, php-format
+msgid "Code button after the properties button in the %s top bar."
+msgstr ""
+
+#: views/admin/sections/integrations.php:92
+msgid "Code on"
+msgstr ""
+
+#: views/admin/sections/integrations.php:93
+msgid "Each item gets its own code, edited from the builder. It runs on every page that uses the template, header, footer, popup or global block."
+msgstr ""
+
+#: views/admin/sections/integrations.php:110
+#: views/admin/sections/integrations.php:113
+msgid "Run code in the builder preview"
+msgstr ""
+
+#: views/admin/sections/integrations.php:111
+msgid "Off by default so analytics and chat widgets do not fire while you design."
+msgstr ""
+
+#: views/admin/sections/integrations.php:133
+msgid "Who sees the toolbar buttons"
+msgstr ""
+
+#: views/admin/sections/integrations.php:134
+msgid "Applies to the block editor icon and the builder button. Hiding a button never removes code access — that follows the user’s capabilities."
+msgstr ""
+
+#: views/admin/sections/integrations.php:138
+msgid "Show for these roles"
+msgstr ""
+
+#: views/admin/sections/integrations.php:139
+msgid "Only roles allowed to add raw code are listed."
+msgstr ""
+
+#: views/admin/sections/integrations.php:156
+msgid "Hide for these users"
+msgstr ""
+
+#: views/admin/sections/integrations.php:157
+msgid "Ticked users never see either button, whatever their role."
+msgstr ""
+
+#: views/admin/sections/integrations.php:169
+msgid "(you)"
+msgstr ""
+
+#: views/admin/sections/integrations.php:176
+msgid "No users can add raw code."
+msgstr ""
+
+#: views/admin/sections/output.php:17
+msgid "Where per-page code is available and where code lands in the page."
+msgstr ""
+
+#: views/admin/sections/output.php:23
+msgid "Per-page code on"
+msgstr ""
+
+#: views/admin/sections/output.php:24
+msgid "Content types whose editor offers page-specific code."
+msgstr ""
+
+#: views/admin/sections/output.php:41
+msgid "Hook priority"
+msgstr ""
+
+#: views/admin/sections/output.php:42
+msgid "Lower runs earlier. The default 1000001 prints at the very end of <head> and <body>, after theme and builder CSS/JS, so your styles win and scripts can use loaded libraries. Use a low number (e.g. 1) for tags that must load first."
+msgstr ""
+
+#: views/admin/sections/output.php:52
+#: views/admin/sections/output.php:58
+msgid "HTML comment markers"
+msgstr ""
+
+#: views/admin/sections/output.php:53
+msgid "Wraps each snippet in <!-- AHFCM … --> comments so you can find it in View Source."
+msgstr ""
+
+#: views/admin/sections/tools.php:22
+msgid "Import from the old snippet and restore earlier versions of the global code."
+msgstr ""
+
+#: views/admin/sections/tools.php:26
 msgid "Import from \"Page Header & Body Code Embed\""
 msgstr ""
 
 #. translators: %d: number of posts.
-#: admin/views/settings-page.php:324
+#: views/admin/sections/tools.php:31
 #, php-format
 msgid "%d post or page has legacy code."
 msgid_plural "%d posts or pages have legacy code."
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/views/settings-page.php:328
+#: views/admin/sections/tools.php:35
 msgid "Header code goes to Header Code; the old \"Body Code\" goes to Footer Code, where it actually ran. Legacy data and the WPCodeBox snippet are never changed."
 msgstr ""
 
-#: admin/views/settings-page.php:333
+#: views/admin/sections/tools.php:40
 msgid "Dry run — nothing was changed."
 msgstr ""
 
-#: admin/views/settings-page.php:333
+#: views/admin/sections/tools.php:40
 msgid "Import finished."
 msgstr ""
 
-#: admin/views/settings-page.php:336
+#: views/admin/sections/tools.php:43
 msgid "No legacy code found."
 msgstr ""
 
-#: admin/views/settings-page.php:341
+#: views/admin/sections/tools.php:48
 msgid "Post"
 msgstr ""
 
-#: admin/views/settings-page.php:342
+#: views/admin/sections/tools.php:49
 msgid "Legacy field"
 msgstr ""
 
-#: admin/views/settings-page.php:343
+#: views/admin/sections/tools.php:50
 msgid "Target"
 msgstr ""
 
-#: admin/views/settings-page.php:344
+#: views/admin/sections/tools.php:51
 msgid "Result"
 msgstr ""
 
-#: admin/views/settings-page.php:345
+#: views/admin/sections/tools.php:52
 msgid "Notes"
 msgstr ""
 
-#: admin/views/settings-page.php:369
+#: views/admin/sections/tools.php:76
 msgid "Enable imported code immediately"
 msgstr ""
 
-#: admin/views/settings-page.php:370
+#: views/admin/sections/tools.php:77
 msgid "Leave off while the legacy snippet is active, otherwise code prints twice. Turn off WPCodeBox snippet #7 first, then run again with this on."
 msgstr ""
 
-#: admin/views/settings-page.php:374
+#: views/admin/sections/tools.php:81
 msgid "Dry run"
 msgstr ""
 
-#: admin/views/settings-page.php:375
+#: views/admin/sections/tools.php:82
 msgid "Run import"
 msgstr ""
 
-#: admin/views/settings-page.php:381
+#: views/admin/sections/tools.php:88
 msgid "Global code history"
 msgstr ""
 
-#: admin/views/settings-page.php:383
+#: views/admin/sections/tools.php:90
 msgid "No earlier versions yet. Each time global code changes, the previous version is kept here (last 5)."
 msgstr ""
 
-#: admin/views/settings-page.php:388
-#: includes/class-breakdance.php:500
-msgid "Saved"
-msgstr ""
-
-#: admin/views/settings-page.php:389
+#: views/admin/sections/tools.php:96
 msgid "By"
 msgstr ""
 
-#: admin/views/settings-page.php:390
+#: views/admin/sections/tools.php:97
 msgid "Size"
 msgstr ""
 
-#: admin/views/settings-page.php:412
+#: views/admin/sections/tools.php:119
 msgid "Restore"
 msgstr ""
 
-#: admin/views/settings-page.php:426
-msgid "How it works"
+#: views/editor/panel.php:33
+msgid "Global"
 msgstr ""
 
-#: admin/views/settings-page.php:431
-msgid "Each page has its own \"Header & Body Code Embed\" box. When both exist, global code prints first, then the page code. A page can skip global code."
+#: views/editor/panel.php:38
+msgid "Save (Ctrl+S)"
 msgstr ""
 
-#: admin/views/settings-page.php:432
-msgid "HTML mode outputs code exactly as written. CSS and JS modes wrap your code in <style> or <script> for you. PHP is never executed."
+#: views/editor/panel.php:38
+msgid "Save"
 msgstr ""
 
-#: admin/views/settings-page.php:437
-msgid "Keyboard shortcuts"
+#: views/editor/panel.php:39
+msgid "Close"
 msgstr ""
 
-#: admin/views/settings-page.php:439
-msgid "Autocomplete"
+#: views/editor/panel.php:39
+msgid "Close (Esc)"
 msgstr ""
 
-#: admin/views/settings-page.php:440
-msgid "Search"
+#: views/editor/panel.php:48
+msgid "Code is not enabled for this content type. Turn it on under Settings → Header & Footer Code → Settings (“Per-page code on” or “Breakdance templates”), or use the Global tab."
 msgstr ""
 
-#: admin/views/settings-page.php:441
-msgid "Search and replace"
+#: views/editor/panel.php:56
+msgid "Custom code on this page"
 msgstr ""
 
-#: admin/views/settings-page.php:442
-msgid "Jump to line"
+#: views/editor/panel.php:66
+#: views/editor/panel.php:93
+msgid "Switched OFF: none of the code below is loaded. Turn on the first switch to load it."
 msgstr ""
 
-#: admin/views/settings-page.php:443
-msgid "Toggle comment"
+#: views/editor/panel.php:86
+msgid "Global code enabled"
 msgstr ""
 
-#: admin/views/settings-page.php:444
-msgid "Fold / unfold block"
+#: views/editor/panel.php:89
+msgid "Runs on every page of the site."
 msgstr ""
 
-#: admin/views/settings-page.php:445
-msgid "Format code"
+#: views/editor/panel.php:90
+msgid "All settings ↗"
 msgstr ""
 
-#: admin/views/settings-page.php:446
-msgid "Full screen (Esc exits)"
+#: views/editor/panel.php:108
+msgid "Code runs on the live site exactly as written. Only paste code you trust."
 msgstr ""
 
-#: admin/views/settings-page.php:447
-msgid "Move focus out of the editor"
+#: views/editor/slot.php:30
+msgid "HTML is output exactly as written: tags, <script src>, <link>, <meta>, JSON-LD…"
 msgstr ""
 
-#: admin/views/settings-page.php:449
-msgid "Linting (HTMLHint, CSSLint, Espree) catches common mistakes but cannot prove code is correct or safe. Autocomplete suggests tags, attributes, properties and keywords — it is not full IntelliSense. Format only applies when the result differs in whitespace alone."
+#: views/editor/slot.php:31
+msgid "Plain CSS, wrapped in <style> for you. Printed before the HTML."
 msgstr ""
 
-#: includes/class-breakdance.php:59
-msgid "Templates"
+#: views/editor/slot.php:32
+msgid "Plain JavaScript, wrapped in <script> for you. Printed after the HTML."
 msgstr ""
 
-#: includes/class-breakdance.php:60
-msgid "Headers"
+#: views/editor/slot.php:76
+msgid "Format code (Shift+Alt+F)"
 msgstr ""
 
-#: includes/class-breakdance.php:61
-msgid "Footers"
+#: views/editor/slot.php:78
+msgid "Format"
 msgstr ""
 
-#: includes/class-breakdance.php:62
-msgid "Popups"
-msgstr ""
-
-#: includes/class-breakdance.php:63
-msgid "Global Blocks"
-msgstr ""
-
-#: includes/class-breakdance.php:498
-msgid "Loading…"
-msgstr ""
-
-#: includes/class-breakdance.php:499
-msgid "Saving…"
-msgstr ""
-
-#. translators: %s: error message.
-#: includes/class-breakdance.php:503
-#, php-format
-msgid "Could not save: %s"
-msgstr ""
-
-#. translators: %s: error message.
-#: includes/class-breakdance.php:505
-#, php-format
-msgid "Could not load code: %s"
-msgstr ""
-
-#: includes/class-breakdance.php:506
-msgid "You have unsaved code changes. Close anyway?"
-msgstr ""
-
-#. translators: 1: post type name, 2: post title.
-#: includes/class-breakdance.php:508
-#, php-format
-msgid "%1$s: %2$s"
-msgstr ""
-
-#: includes/class-breakdance.php:509
-msgid "You cannot edit code for this document."
-msgstr ""
-
-#. translators: %s: Breakdance document type, e.g. "template".
-#: includes/class-breakdance.php:512
-#, php-format
-msgid "This %s"
-msgstr ""
-
-#. translators: %s: Breakdance document type, e.g. "template".
-#: includes/class-breakdance.php:517
-#, php-format
-msgid "Every page using this %s"
-msgstr ""
-
-#: includes/class-migration.php:119
-msgid "Contains backslashes. The old plugin removed them on output; this plugin outputs code exactly as stored. Review before enabling."
-msgstr ""
-
-#: includes/class-migration.php:122
-msgid "Post type is not enabled for per-post code; the imported code will not run until it is."
-msgstr ""
-
-#: includes/class-migration.php:173
-msgid "Will be imported"
-msgstr ""
-
-#: includes/class-migration.php:174
-msgid "Will be enabled"
-msgstr ""
-
-#: includes/class-migration.php:175
-msgid "Imported"
-msgstr ""
-
-#: includes/class-migration.php:177
-msgid "Already imported"
-msgstr ""
-
-#: includes/class-migration.php:178
-msgid "Skipped: slot already has different code"
-msgstr ""
-
-#: includes/class-migration.php:179
-msgid "Failed: verification mismatch"
-msgstr ""
-
-#: includes/class-post-meta.php:85
-msgid "Header, body and footer code for this post."
-msgstr ""
-
-#: includes/class-rest.php:100
-msgid "Not saved: this panel was loaded before the plugin was updated. Reload the builder and make your changes again."
-msgstr ""
-
-#: includes/class-rest.php:163
-msgid "Per-page code is not enabled for this content type."
-msgstr ""
-
-#: includes/class-settings.php:209
-msgid "Not saved: this page was opened before the plugin was updated. Reload the page and make your changes again."
-msgstr ""
-
-#: includes/class-ui.php:97
-msgid "Code formatted."
-msgstr ""
-
-#: includes/class-ui.php:98
-msgid "Code is already formatted."
-msgstr ""
-
-#: includes/class-ui.php:99
-msgid "Nothing to format."
-msgstr ""
-
-#: includes/class-ui.php:100
-msgid "The formatter did not load, so the code was not changed."
-msgstr ""
-
-#: includes/class-ui.php:101
-msgid "Formatting was cancelled because it would change more than whitespace. Your code was not modified."
-msgstr ""
-
-#: includes/class-ui.php:102
-msgid "This snippet contains PHP tags. PHP is not formatted or executed; the code was not changed."
-msgstr ""
-
-#. translators: %s: error message from the formatter.
-#: includes/class-ui.php:104
-#, php-format
-msgid "The formatter failed: %s. Your code was not modified."
-msgstr ""
-
-#: includes/class-ui.php:105
-msgid "No problems found"
-msgstr ""
-
-#. translators: 1: number of errors, 2: number of warnings.
-#: includes/class-ui.php:107
-#, php-format
-msgid "%1$d error(s), %2$d warning(s)"
-msgstr ""
-
-#: includes/class-ui.php:108
-msgid "You have unsaved code changes."
-msgstr ""
-
-#. translators: %s: language name.
-#: includes/class-ui.php:110
-#, php-format
-msgid "Editor language changed to %s."
-msgstr ""
-
-#: includes/class-ui.php:111
-msgid "Exit full screen"
-msgstr ""
-
-#. translators: 1: line number, 2: column number.
-#: includes/class-ui.php:114
-#, php-format
-msgid "Ln %1$d, Col %2$d"
-msgstr ""
-
-#. translators: %d: number of lines.
-#: includes/class-ui.php:116
-#, php-format
-msgid "%d lines"
-msgstr ""
-
-#: includes/class-ui.php:118
-msgid "Pick color"
-msgstr ""
-
-#: includes/class-ui.php:119
-msgid "Hue"
-msgstr ""
-
-#: includes/class-ui.php:120
-msgid "Opacity"
-msgstr ""
-
-#: includes/class-ui.php:121
-msgid "Saturation and brightness"
-msgstr ""
-
-#: includes/class-ui.php:122
-msgid "Color value"
-msgstr ""
-
-#: includes/class-ui.php:123
-msgid "Pick from screen"
-msgstr ""
-
-#: includes/class-ui.php:125
-msgid "PHP tags are not executed; they will be sent to the browser as text."
-msgstr ""
-
-#: includes/class-ui.php:126
-msgid "This tab wraps your code in <style> or <script> for you. Remove the tags here, or move tag-based code to the HTML tab."
-msgstr ""
-
-#: includes/class-ui.php:127
-msgid "This looks like plain CSS or JavaScript. Put it in the CSS or JS tab, or wrap it in <style> / <script>."
-msgstr ""
-
-#: includes/class-ui.php:145
-msgid "HTML"
-msgstr ""
-
-#: includes/class-ui.php:146
-msgid "CSS"
-msgstr ""
-
-#: includes/class-ui.php:147
-msgid "JS"
-msgstr ""
-
-#: includes/class-ui.php:159
-msgid "Header Code"
-msgstr ""
-
-#: includes/class-ui.php:161
-msgid "Printed by wp_head, before </head>. Meta and verification tags, analytics loaders, preload hints, CSS."
-msgstr ""
-
-#: includes/class-ui.php:164
-msgid "Footer Code"
-msgstr ""
-
-#: includes/class-ui.php:166
-msgid "Printed by wp_footer, after footer scripts and before </body>. Chat widgets, tag-manager noscript, scripts that need the page loaded."
+#: views/editor/slot.php:80
+msgid "Full screen (F11)"
 msgstr ""

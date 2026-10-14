@@ -16,10 +16,12 @@
 
 // phpcs:disable WordPress.Security, WordPress.WP.GlobalVariablesOverride, WordPress.PHP.DevelopmentFunctions
 
-use AHFCM\Frontend;
-use AHFCM\Post_Meta;
-use AHFCM\Settings;
-use AHFCM\Migration;
+use AHFCM\Admin\LegacyImport;
+use AHFCM\Core\Injector;
+use AHFCM\Core\PostMeta;
+use AHFCM\Core\Settings;
+use AHFCM\Core\Visibility;
+use AHFCM\Integration\Loader;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( "Run with: wp eval-file tests/verify.php\n" );
@@ -81,10 +83,10 @@ function ahfcm_submit_meta_box( $post_id, array $fields, $nonce = '' ) {
 		unset( $fields['_schema'] );
 	}
 	$_POST = array(
-		Post_Meta::NONCE_FIELD => '' === $nonce ? wp_create_nonce( Post_Meta::NONCE_PREFIX . $post_id ) : $nonce,
-		Post_Meta::FORM_FIELD  => wp_slash( $fields ),
+		PostMeta::NONCE_FIELD => '' === $nonce ? wp_create_nonce( PostMeta::NONCE_PREFIX . $post_id ) : $nonce,
+		PostMeta::FORM_FIELD  => wp_slash( $fields ),
 	);
-	( new Post_Meta() )->save_from_request( $post_id, get_post( $post_id ) );
+	( new PostMeta() )->save_from_request( $post_id, get_post( $post_id ) );
 	$_POST = array();
 }
 
@@ -95,6 +97,17 @@ $ahfcm_created_users   = array();
 $ahfcm_admin_id        = (int) ( get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) )[0] ?? 0 );
 
 try {
+	// Breakdance or Oxygen: post types and meta keys come from the running engine.
+	$ahfcm_builder     = Loader::builder();
+	$ahfcm_tpl_type    = defined( 'BREAKDANCE_TEMPLATE_POST_TYPE' ) ? BREAKDANCE_TEMPLATE_POST_TYPE : 'breakdance_template';
+	$ahfcm_block_type  = defined( 'BREAKDANCE_BLOCK_POST_TYPE' ) ? BREAKDANCE_BLOCK_POST_TYPE : 'breakdance_block';
+	$ahfcm_popup_type  = defined( 'BREAKDANCE_POPUP_POST_TYPE' ) ? BREAKDANCE_POPUP_POST_TYPE : 'breakdance_popup';
+	$ahfcm_bdox        = '\Breakdance\BreakdanceOxygen\Strings\__bdox';
+	$ahfcm_meta_prefix = function_exists( $ahfcm_bdox ) ? call_user_func( $ahfcm_bdox, '_meta_prefix' ) : '_breakdance_';
+	if ( $ahfcm_builder ) {
+		WP_CLI::line( 'Builder detected: ' . $ahfcm_builder->get_label() );
+	}
+
 	wp_set_current_user( $ahfcm_admin_id );
 
 	// Code with characters that commonly get mangled: backslashes, quotes,
@@ -153,19 +166,19 @@ try {
 	WP_CLI::line( 'Storage' );
 	wp_cache_flush();
 	Settings::flush_cache();
-	$stored = Post_Meta::get( $page_a );
+	$stored = PostMeta::get( $page_a );
 	ahfcm_check( '8/14 Per-post code persists and is stored byte-exact (CRLF → LF only)', Settings::normalize_code( "<!-- P-FOOT -->
 " . $tricky ) === $stored['slots']['footer']['html'] );
 	ahfcm_check( '19 Saving post code did not change global code', '<meta name="ahfcm-test" content="G-HEAD">' === Settings::get()['slots']['head']['html'] );
-	$raw_meta = get_post_meta( $page_a, Post_Meta::META_KEY, true );
-	ahfcm_check( 'Meta stored under a single protected key', is_array( $raw_meta ) && is_protected_meta( Post_Meta::META_KEY, 'post' ) );
+	$raw_meta = get_post_meta( $page_a, PostMeta::META_KEY, true );
+	ahfcm_check( 'Meta stored under a single protected key', is_array( $raw_meta ) && is_protected_meta( PostMeta::META_KEY, 'post' ) );
 	ahfcm_check( 'Legacy meta keys untouched', ! metadata_exists( 'post', $page_a, '_page_header_code' ) );
 
-	$before_global = Post_Meta::get( $page_a );
+	$before_global = PostMeta::get( $page_a );
 	$g             = Settings::get();
 	$g['slots']['head']['html'] .= "\n<!-- G-HEAD-2 -->";
 	update_option( Settings::OPTION, $g );
-	ahfcm_check( '19 Saving global code did not change post code', Post_Meta::get( $page_a ) === $before_global );
+	ahfcm_check( '19 Saving global code did not change post code', PostMeta::get( $page_a ) === $before_global );
 	ahfcm_check( 'Previous global version recorded in history', count( Settings::get_history() ) >= 1 );
 
 	WP_CLI::line( 'Front end (HTTP)' );
@@ -231,7 +244,7 @@ try {
 			),
 		)
 	);
-	$m      = Post_Meta::get( $multi_page );
+	$m      = PostMeta::get( $multi_page );
 	$html_m = ahfcm_fetch( get_permalink( $multi_page ) );
 	ahfcm_check( 'All three parts are stored separately', '.m-css{color:red}' === $m['slots']['head']['css'] && 'window.M_JS=1;' === $m['slots']['head']['js'] && '<meta name="ahfcm-multi" content="M-HTML">' === $m['slots']['head']['html'] );
 	ahfcm_check( 'Head prints CSS (in <style>), then HTML, then JS (in <script>)', (bool) preg_match( '#<style>\s*\.m-css\{color:red\}\s*</style>\s*<meta name="ahfcm-multi" content="M-HTML">\s*<script>\s*window\.M_JS=1;\s*</script>#', $html_m ) && strpos( $html_m, 'M_JS' ) < strpos( $html_m, '</head>' ) );
@@ -255,7 +268,7 @@ try {
 		)
 	);
 	$html_a2 = ahfcm_fetch( get_permalink( $page_a ) );
-	ahfcm_check( '7 Disabled page slot is not injected (code kept)', false === strpos( $html_a2, 'P-HEAD' ) && false !== strpos( Post_Meta::get( $page_a )['slots']['head']['css'], 'P-HEAD' ) );
+	ahfcm_check( '7 Disabled page slot is not injected (code kept)', false === strpos( $html_a2, 'P-HEAD' ) && false !== strpos( PostMeta::get( $page_a )['slots']['head']['css'], 'P-HEAD' ) );
 	ahfcm_check( '7 "Do not load global code" suppresses global code on that page only', false === strpos( $html_a2, 'G-HEAD' ) && false !== strpos( $html_a2, 'P-FOOT' ) && false !== strpos( ahfcm_fetch( get_permalink( $page_b ) ), 'G-HEAD' ) );
 
 	ahfcm_submit_meta_box( $page_a, array( 'enabled' => '0', 'slots' => array( 'footer' => array( 'code' => '<!-- P-FOOT -->' ) ) ) );
@@ -289,7 +302,7 @@ try {
 	ahfcm_check( 'Builder preview request gets no snippets (default)', false === strpos( $builder, 'G-HEAD' ) );
 
 	WP_CLI::line( 'In-process engine' );
-	$frontend = new Frontend();
+	$frontend = new Injector();
 	ob_start();
 	$frontend->print_head();
 	$frontend->print_head();
@@ -305,9 +318,9 @@ try {
 	);
 	$no_meta_post = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'AHFCM no meta' ) );
 	$ahfcm_created_posts[] = $no_meta_post;
-	update_post_meta( $no_meta_post, Post_Meta::META_KEY, 'garbage-not-an-array' );
+	update_post_meta( $no_meta_post, PostMeta::META_KEY, 'garbage-not-an-array' );
 	$out1 = $frontend->render( 'head', $no_meta_post );
-	delete_post_meta( $no_meta_post, Post_Meta::META_KEY );
+	delete_post_meta( $no_meta_post, PostMeta::META_KEY );
 	$out2 = $frontend->render( 'footer', $no_meta_post );
 	update_option( Settings::OPTION, 'garbage' );
 	Settings::flush_cache();
@@ -320,7 +333,7 @@ try {
 
 	WP_CLI::line( 'Security' );
 	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- BAD-NONCE -->' ) ) ), 'invalid-nonce' );
-	ahfcm_check( '11 Invalid nonce is rejected', false === strpos( Post_Meta::get( $page_b )['slots']['head']['html'], 'BAD-NONCE' ) );
+	ahfcm_check( '11 Invalid nonce is rejected', false === strpos( PostMeta::get( $page_b )['slots']['head']['html'], 'BAD-NONCE' ) );
 
 	$author_id             = wp_insert_user( array( 'user_login' => 'ahfcm_author_' . wp_rand(), 'user_pass' => wp_generate_password( 24 ), 'role' => 'author' ) );
 	$editor_id             = wp_insert_user( array( 'user_login' => 'ahfcm_editor_' . wp_rand(), 'user_pass' => wp_generate_password( 24 ), 'role' => 'editor' ) );
@@ -332,12 +345,12 @@ try {
 	wp_set_current_user( $author_id );
 	ahfcm_check( '10 Author can edit own post but lacks code capability', current_user_can( 'edit_post', $author_post ) && ! current_user_can( 'ahfcm_edit_post_code', $author_post ) );
 	ahfcm_submit_meta_box( $author_post, array( 'slots' => array( 'head' => array( 'code' => '<script>alert(1)</script>' ) ) ) );
-	ahfcm_check( '10 Author (no unfiltered_html) cannot save code, even with a valid nonce', '' === Post_Meta::get( $author_post )['slots']['head']['html'] );
+	ahfcm_check( '10 Author (no unfiltered_html) cannot save code, even with a valid nonce', '' === PostMeta::get( $author_post )['slots']['head']['html'] );
 	ahfcm_check( '10 Author cannot manage global code', ! current_user_can( 'ahfcm_manage_global' ) );
 
 	wp_set_current_user( $subscriber_id );
 	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- SUB -->' ) ) ) );
-	ahfcm_check( '10 Subscriber cannot save code', false === strpos( Post_Meta::get( $page_b )['slots']['head']['html'], 'SUB' ) );
+	ahfcm_check( '10 Subscriber cannot save code', false === strpos( PostMeta::get( $page_b )['slots']['head']['html'], 'SUB' ) );
 
 	wp_set_current_user( $editor_id );
 	$editor_can = current_user_can( 'unfiltered_html' );
@@ -366,32 +379,32 @@ try {
 	$res = $ahfcm_rest( 'GET', 'post/' . $page_b );
 	ahfcm_check( 'REST GET post returns code for admin', 200 === $res->get_status() && true === $res->get_data()['supported'] && isset( $res->get_data()['data']['slots']['head'] ) );
 	$res = $ahfcm_rest( 'POST', 'post/' . $page_b, array( 'data' => array( 'enabled' => true, 'slots' => array( 'footer' => array( 'code' => "<script>var r=/\d+/;</script>", 'enabled' => true, 'language' => 'html' ) ) ) ) );
-	ahfcm_check( 'REST POST post saves byte-exact code (backslashes kept)', 200 === $res->get_status() && "<script>var r=/\d+/;</script>" === Post_Meta::get( $page_b )['slots']['footer']['html'] );
+	ahfcm_check( 'REST POST post saves byte-exact code (backslashes kept)', 200 === $res->get_status() && "<script>var r=/\d+/;</script>" === PostMeta::get( $page_b )['slots']['footer']['html'] );
 	$before_global = Settings::get();
 	$res           = $ahfcm_rest( 'POST', 'global', array( 'data' => array( 'enabled' => true, 'slots' => array( 'head' => array( 'html' => '<!-- REST-GLOBAL -->' ) ) ) ) );
 	$after_global  = Settings::get();
 	ahfcm_check( 'REST POST global updates code but keeps other settings', 200 === $res->get_status() && '<!-- REST-GLOBAL -->' === $after_global['slots']['head']['html'] && $after_global['slots']['head']['priority'] === $before_global['slots']['head']['priority'] && $after_global['editor_theme'] === $before_global['editor_theme'] && $after_global['slots']['footer'] === $before_global['slots']['footer'] );
-	if ( post_type_exists( 'breakdance_template' ) ) {
-		WP_CLI::line( 'Breakdance templates' );
-		$template_id           = wp_insert_post( array( 'post_type' => 'breakdance_template', 'post_status' => 'publish', 'post_title' => 'AHFCM tpl' ) );
+	if ( $ahfcm_builder && post_type_exists( $ahfcm_tpl_type ) ) {
+		WP_CLI::line( 'Builder templates' );
+		$template_id           = wp_insert_post( array( 'post_type' => $ahfcm_tpl_type, 'post_status' => 'publish', 'post_title' => 'AHFCM tpl' ) );
 		$ahfcm_created_posts[] = $template_id;
 		$res                   = $ahfcm_rest( 'POST', 'post/' . $template_id, array( 'data' => array( 'slots' => array( 'head' => array( 'code' => '<!-- TPL-SAVE -->' ) ) ) ) );
-		ahfcm_check( 'REST saves code on a Breakdance template (enabled by default)', 200 === $res->get_status() && true === $res->get_data()['breakdance'] && '<!-- TPL-SAVE -->' === Post_Meta::get( $template_id )['slots']['head']['html'] );
+		ahfcm_check( 'REST saves code on a builder template (enabled by default)', 200 === $res->get_status() && true === $res->get_data()['template'] && '<!-- TPL-SAVE -->' === PostMeta::get( $template_id )['slots']['head']['html'] );
 
 		// Find the template Breakdance actually uses for a single post.
 		$probe = ahfcm_fetch( get_permalink( $post_a ) );
 		$used  = 0;
-		foreach ( get_posts( array( 'post_type' => 'breakdance_template', 'numberposts' => -1, 'fields' => 'ids', 'post_status' => 'publish' ) ) as $tid ) {
+		foreach ( get_posts( array( 'post_type' => $ahfcm_tpl_type, 'numberposts' => -1, 'fields' => 'ids', 'post_status' => 'publish' ) ) as $tid ) {
 			if ( (int) $tid === (int) $template_id ) {
 				continue;
 			}
-			$backup = get_post_meta( $tid, Post_Meta::META_KEY, true );
-			Post_Meta::save( $tid, array( 'slots' => array( 'footer' => array( 'code' => '<!-- TPL-' . $tid . ' -->' ) ) ) );
+			$backup = get_post_meta( $tid, PostMeta::META_KEY, true );
+			PostMeta::save( $tid, array( 'slots' => array( 'footer' => array( 'code' => '<!-- TPL-' . $tid . ' -->' ) ) ) );
 			$html = ahfcm_fetch( get_permalink( $post_a ) );
 			if ( '' === $backup ) {
-				delete_post_meta( $tid, Post_Meta::META_KEY );
+				delete_post_meta( $tid, PostMeta::META_KEY );
 			} else {
-				update_post_meta( $tid, Post_Meta::META_KEY, wp_slash( $backup ) );
+				update_post_meta( $tid, PostMeta::META_KEY, wp_slash( $backup ) );
 			}
 			if ( false !== strpos( $html, '<!-- TPL-' . $tid . ' -->' ) ) {
 				$used = (int) $tid;
@@ -399,26 +412,31 @@ try {
 			}
 		}
 		if ( $used ) {
-			Post_Meta::save( $used, array( 'slots' => array( 'footer' => array( 'code' => '<!-- TPL-USED -->' ) ) ) );
+			PostMeta::save( $used, array( 'slots' => array( 'footer' => array( 'code' => '<!-- TPL-USED -->' ) ) ) );
 			$html_post = ahfcm_fetch( get_permalink( $post_a ) );
-			ahfcm_check( 'Template code is output on a post rendered by that template, after global code', false !== strpos( $html_post, '<!-- AHFCM footer (breakdance_template ' . $used . ') -->' ) && strpos( $html_post, 'G-FOOT' ) < strpos( $html_post, 'TPL-USED' ) );
-			ahfcm_check( 'Template code is not output on pages that use another template', false === strpos( ahfcm_fetch( get_permalink( $page_b ) ), 'TPL-USED' ) );
+			ahfcm_check( 'Template code is output on a post rendered by that template, after global code', false !== strpos( $html_post, '<!-- AHFCM footer (' . $ahfcm_tpl_type . ' ' . $used . ') -->' ) && strpos( $html_post, 'G-FOOT' ) < strpos( $html_post, 'TPL-USED' ) );
+			// A template may cover every single post AND page ("All Singles"), so
+			// compare against the posts archive, which never uses a singles template.
+			$archive = 'posts' === get_option( 'show_on_front' ) ? home_url( '/' ) : ( get_option( 'page_for_posts' ) ? get_permalink( (int) get_option( 'page_for_posts' ) ) : '' );
+			if ( $archive ) {
+				ahfcm_check( 'Template code is not output where the template is not used (posts archive)', false === strpos( ahfcm_fetch( $archive ), 'TPL-USED' ) );
+			}
 			$g                     = Settings::get();
 			$g['breakdance_types'] = array();
 			update_option( Settings::OPTION, $g );
 			ahfcm_check( 'Unticking "Breakdance templates" stops template code', false === strpos( ahfcm_fetch( get_permalink( $post_a ) ), 'TPL-USED' ) );
 			$g['breakdance_types'] = null;
 			update_option( Settings::OPTION, $g );
-			delete_post_meta( $used, Post_Meta::META_KEY );
+			delete_post_meta( $used, PostMeta::META_KEY );
 		} else {
-			WP_CLI::line( '  SKIP  No published Breakdance template renders single posts on this site' );
+			WP_CLI::line( '  SKIP  No published builder template renders single posts on this site' );
 		}
 	}
 
-	if ( post_type_exists( 'breakdance_block' ) ) {
-		WP_CLI::line( 'Breakdance global blocks' );
-		$block_id              = wp_insert_post( array( 'post_type' => 'breakdance_block', 'post_status' => 'publish', 'post_title' => 'AHFCM block' ) );
-		$nested_id             = wp_insert_post( array( 'post_type' => 'breakdance_block', 'post_status' => 'publish', 'post_title' => 'AHFCM nested block' ) );
+	if ( $ahfcm_builder && post_type_exists( $ahfcm_block_type ) ) {
+		WP_CLI::line( 'Builder global blocks' );
+		$block_id              = wp_insert_post( array( 'post_type' => $ahfcm_block_type, 'post_status' => 'publish', 'post_title' => 'AHFCM block' ) );
+		$nested_id             = wp_insert_post( array( 'post_type' => $ahfcm_block_type, 'post_status' => 'publish', 'post_title' => 'AHFCM nested block' ) );
 		$host_page             = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'AHFCM block host' ) );
 		$ahfcm_created_posts[] = $block_id;
 		$ahfcm_created_posts[] = $nested_id;
@@ -426,14 +444,14 @@ try {
 		$tree = function ( $children ) {
 			return wp_slash( wp_json_encode( array( 'tree_json_string' => wp_json_encode( array( 'root' => array( 'id' => 1, 'data' => array( 'type' => 'root' ), 'children' => $children ) ) ) ) ) );
 		};
-		update_post_meta( $host_page, '_breakdance_data', $tree( array( array( 'id' => 2, 'data' => array( 'type' => 'EssentialElements\GlobalBlock', 'properties' => array( 'content' => array( 'content' => array( 'block' => $block_id ) ) ) ), 'children' => array() ) ) ) );
-		update_post_meta( $block_id, '_breakdance_data', $tree( array( array( 'id' => 3, 'data' => array( 'type' => 'EssentialElements\PostsLoop', 'properties' => array( 'content' => array( 'repeated_block' => array( 'global_block' => $nested_id ) ) ) ), 'children' => array() ) ) ) );
-		ahfcm_check( 'Global blocks found in a page tree, including nested blocks', array( $block_id, $nested_id ) === \AHFCM\Breakdance::global_block_ids( array( $host_page ), 'head' ) );
-		ahfcm_check( 'No global blocks for a page that uses none', array() === \AHFCM\Breakdance::global_block_ids( array( $page_b ), 'head' ) );
+		update_post_meta( $host_page, $ahfcm_meta_prefix . 'data', $tree( array( array( 'id' => 2, 'data' => array( 'type' => 'EssentialElements\GlobalBlock', 'properties' => array( 'content' => array( 'content' => array( 'block' => $block_id ) ) ) ), 'children' => array() ) ) ) );
+		update_post_meta( $block_id, $ahfcm_meta_prefix . 'data', $tree( array( array( 'id' => 3, 'data' => array( 'type' => 'EssentialElements\PostsLoop', 'properties' => array( 'content' => array( 'repeated_block' => array( 'global_block' => $nested_id ) ) ) ), 'children' => array() ) ) ) );
+		ahfcm_check( 'Global blocks found in a page tree, including nested blocks', array( $block_id, $nested_id ) === $ahfcm_builder->global_block_ids( array( $host_page ), 'head' ) );
+		ahfcm_check( 'No global blocks for a page that uses none', array() === $ahfcm_builder->global_block_ids( array( $page_b ), 'head' ) );
 		$res = $ahfcm_rest( 'POST', 'post/' . $nested_id, array( 'data' => array( 'slots' => array( 'head' => array( 'code' => '<!-- NESTED-BLOCK -->' ) ) ) ) );
 		ahfcm_check( 'REST saves code on a global block', 200 === $res->get_status() );
 		$html_host = ahfcm_fetch( get_permalink( $host_page ) );
-		ahfcm_check( 'Nested global block head code is output on the page using it', false !== strpos( $html_host, '<!-- AHFCM head (breakdance_block ' . $nested_id . ') -->' ) && strpos( $html_host, '<!-- NESTED-BLOCK -->' ) < strpos( $html_host, '</head>' ) );
+		ahfcm_check( 'Nested global block head code is output on the page using it', false !== strpos( $html_host, '<!-- AHFCM head (' . $ahfcm_block_type . ' ' . $nested_id . ') -->' ) && strpos( $html_host, '<!-- NESTED-BLOCK -->' ) < strpos( $html_host, '</head>' ) );
 		ahfcm_check( 'Global block code is not output on unrelated pages', false === strpos( ahfcm_fetch( get_permalink( $page_b ) ), 'NESTED-BLOCK' ) );
 	}
 	wp_set_current_user( $author_id );
@@ -444,61 +462,62 @@ try {
 	ahfcm_check( 'REST denies anonymous visitors', 401 === $ahfcm_rest( 'GET', 'post/' . $page_b )->get_status() && 401 === $ahfcm_rest( 'GET', 'global' )->get_status() );
 	wp_set_current_user( $ahfcm_admin_id );
 
-	if ( post_type_exists( 'breakdance_popup' ) ) {
+	if ( $ahfcm_builder && post_type_exists( $ahfcm_popup_type ) ) {
 		WP_CLI::line( 'Popups opened by a button' );
-		$popup_id              = wp_insert_post( array( 'post_type' => 'breakdance_popup', 'post_status' => 'publish', 'post_title' => 'AHFCM popup' ) );
+		$popup_id              = wp_insert_post( array( 'post_type' => $ahfcm_popup_type, 'post_status' => 'publish', 'post_title' => 'AHFCM popup' ) );
 		$button_page           = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'AHFCM popup host' ) );
 		$ahfcm_created_posts[] = $popup_id;
 		$ahfcm_created_posts[] = $button_page;
 		// Popup with its own display rules disabled: it only appears when opened.
-		update_post_meta( $popup_id, '_breakdance_template_settings', wp_slash( wp_json_encode( array( 'type' => 'everywhere', 'ruleGroups' => array(), 'priority' => 1, 'triggers' => array(), 'disabled' => true ) ) ) );
+		update_post_meta( $popup_id, $ahfcm_meta_prefix . 'template_settings', wp_slash( wp_json_encode( array( 'type' => 'everywhere', 'ruleGroups' => array(), 'priority' => 1, 'triggers' => array(), 'disabled' => true ) ) ) );
 		update_post_meta(
 			$button_page,
-			'_breakdance_data',
+			$ahfcm_meta_prefix . 'data',
 			wp_slash( wp_json_encode( array( 'tree_json_string' => wp_json_encode( array( 'root' => array( 'id' => 1, 'data' => array( 'type' => 'root' ), 'children' => array( array( 'id' => 2, 'data' => array( 'type' => 'EssentialElements\\Button', 'properties' => array( 'content' => array( 'content' => array( 'link' => array( 'type' => 'action', 'action' => array( 'type' => 'popup', 'popupOptions' => array( 'popupId' => (string) $popup_id ) ) ) ) ) ) ), 'children' => array() ) ) ) ) ) ) ) )
 		);
-		Post_Meta::save( $popup_id, array( 'slots' => array( 'head' => array( 'css' => '.ahfcm-popup-test{}' ) ) ) );
-		ahfcm_check( 'Popup referenced by a button is detected', array( $popup_id ) === \AHFCM\Breakdance::referenced_popup_ids( array( $button_page ), 'head' ) );
-		ahfcm_check( 'Pages without the button reference no popups', array() === \AHFCM\Breakdance::referenced_popup_ids( array( $page_b ), 'head' ) );
+		PostMeta::save( $popup_id, array( 'slots' => array( 'head' => array( 'css' => '.ahfcm-popup-test{}' ) ) ) );
+		ahfcm_check( 'Popup referenced by a button is detected', array( $popup_id ) === $ahfcm_builder->referenced_popup_ids( array( $button_page ), 'head' ) );
+		ahfcm_check( 'Pages without the button reference no popups', array() === $ahfcm_builder->referenced_popup_ids( array( $page_b ), 'head' ) );
 		$html_btn = ahfcm_fetch( get_permalink( $button_page ) );
-		ahfcm_check( 'Opened popup head code loads even when its display rules are disabled', false !== strpos( $html_btn, '<!-- AHFCM head (breakdance_popup ' . $popup_id . ') -->' ) && strpos( $html_btn, '.ahfcm-popup-test{}' ) < strpos( $html_btn, '</head>' ) );
+		ahfcm_check( 'Opened popup head code loads even when its display rules are disabled', false !== strpos( $html_btn, '<!-- AHFCM head (' . $ahfcm_popup_type . ' ' . $popup_id . ') -->' ) && strpos( $html_btn, '.ahfcm-popup-test{}' ) < strpos( $html_btn, '</head>' ) );
 		ahfcm_check( 'Popup code does not load on unrelated pages', false === strpos( ahfcm_fetch( get_permalink( $page_b ) ), 'ahfcm-popup-test' ) );
 	}
 
 	WP_CLI::line( 'Builder button visibility' );
 	wp_set_current_user( $ahfcm_admin_id );
 	$admin_user = wp_get_current_user();
-	$bd         = new \AHFCM\Breakdance();
-	$builder_html = function () use ( $bd ) {
-		$_GET['breakdance'] = 'builder';
-		$_GET['id']         = 0;
+	$bd           = $ahfcm_builder ? new \AHFCM\Integration\Breakdance\Editor( $ahfcm_builder ) : null;
+	$builder_html = function () use ( $bd, $ahfcm_builder ) {
+		$mode          = $ahfcm_builder->get_mode(); // ?breakdance=builder or ?oxygen=builder
+		$_GET[ $mode ] = 'builder';
+		$_GET['id']    = 0;
 		ob_start();
-		$bd->print_builder_assets();
+		$bd->print_assets();
 		$out = ob_get_clean();
-		unset( $_GET['breakdance'], $_GET['id'] );
+		unset( $_GET[ $mode ], $_GET['id'] );
 		return $out;
 	};
 	$gb = Settings::get();
-	ahfcm_check( 'Button visible by default for administrators', \AHFCM\Breakdance::button_visible_for( $admin_user ) );
-	if ( defined( '__BREAKDANCE_VERSION' ) ) {
+	ahfcm_check( 'Button visible by default for administrators', Visibility::button_visible_for( $admin_user ) );
+	if ( $bd ) {
 		ahfcm_check( 'Builder page prints the panel when visible', false !== strpos( $builder_html(), 'ahfcm-bd-template' ) );
 	}
 	$gb['builder_button'] = false;
 	update_option( Settings::OPTION, $gb );
-	ahfcm_check( 'Toggle off hides the button for everyone', ! \AHFCM\Breakdance::button_visible_for( $admin_user ) );
-	if ( defined( '__BREAKDANCE_VERSION' ) ) {
+	ahfcm_check( 'Toggle off hides the button for everyone', ! Visibility::button_visible_for( $admin_user ) );
+	if ( $bd ) {
 		ahfcm_check( 'Builder page prints nothing when the button is off', '' === $builder_html() );
 	}
 	$gb['builder_button']       = true;
 	$gb['builder_button_roles'] = array( 'editor' );
 	update_option( Settings::OPTION, $gb );
-	ahfcm_check( 'Role condition hides it for roles not ticked (administrator)', ! \AHFCM\Breakdance::button_visible_for( $admin_user ) );
-	ahfcm_check( 'Role condition shows it for ticked roles (editor)', \AHFCM\Breakdance::button_visible_for( get_userdata( $editor_id ) ) );
+	ahfcm_check( 'Role condition hides it for roles not ticked (administrator)', ! Visibility::button_visible_for( $admin_user ) );
+	ahfcm_check( 'Role condition shows it for ticked roles (editor)', Visibility::button_visible_for( get_userdata( $editor_id ) ) );
 	$gb['builder_button_roles']      = null;
 	$gb['builder_button_hide_users'] = array( (int) $ahfcm_admin_id );
 	update_option( Settings::OPTION, $gb );
-	ahfcm_check( 'Hidden user does not see it', ! \AHFCM\Breakdance::button_visible_for( $admin_user ) );
-	ahfcm_check( 'Other users still see it', \AHFCM\Breakdance::button_visible_for( get_userdata( $editor_id ) ) );
+	ahfcm_check( 'Hidden user does not see it', ! Visibility::button_visible_for( $admin_user ) );
+	ahfcm_check( 'Other users still see it', Visibility::button_visible_for( get_userdata( $editor_id ) ) );
 	ahfcm_check( 'Hiding the button does not remove code access in wp-admin', current_user_can( 'ahfcm_manage_global' ) );
 	$gb['builder_button_hide_users'] = array();
 	update_option( Settings::OPTION, $gb );
@@ -506,7 +525,6 @@ try {
 	ahfcm_check( 'Form values are sanitized (empty markers dropped, IDs as integers)', array( 'administrator' ) === $norm['builder_button_roles'] && array( 5 ) === $norm['builder_button_hide_users'] );
 
 	WP_CLI::line( 'Block editor toolbar button' );
-	require_once AHFCM_DIR . 'admin/class-admin.php';
 	require_once ABSPATH . 'wp-admin/includes/admin.php';
 	wp_set_current_user( $ahfcm_admin_id );
 	$toolbar_loaded = function ( $block_editor ) use ( $page_a ) {
@@ -515,8 +533,8 @@ try {
 		$GLOBALS['post'] = get_post( $page_a );
 		set_current_screen( 'page' );
 		get_current_screen()->is_block_editor( $block_editor );
-		( new \AHFCM\Admin() )->enqueue( 'post.php' );
-		return wp_script_is( 'ahfcm-toolbar', 'enqueued' );
+		( new \AHFCM\Integration\Gutenberg\Editor() )->enqueue( 'post.php' );
+		return wp_script_is( 'ahfcm-gutenberg', 'enqueued' );
 	};
 	$gt = Settings::get();
 	ahfcm_check( 'Toolbar icon loads in the block editor', $toolbar_loaded( true ) );
@@ -542,9 +560,9 @@ try {
 		};
 		add_filter( 'use_block_editor_for_post', $force, 999 );
 		set_current_screen( 'page' );
-		( new \AHFCM\Admin() )->add_meta_box( 'page', get_post( $page_a ) );
+		( new \AHFCM\Admin\MetaBox() )->add( 'page', get_post( $page_a ) );
 		remove_filter( 'use_block_editor_for_post', $force, 999 );
-		return ! empty( $wp_meta_boxes['page']['normal']['default'][ \AHFCM\Admin::META_BOX_ID ] );
+		return ! empty( $wp_meta_boxes['page']['normal']['default'][ \AHFCM\Admin\MetaBox::BOX_ID ] );
 	};
 	$gm = Settings::get();
 	ahfcm_check( 'Block editor: no meta box (the toolbar panel is used)', ! $box_added( true ) );
@@ -561,13 +579,13 @@ try {
 	unset( $GLOBALS['current_screen'] );
 
 	WP_CLI::line( 'Stale-page guard' );
-	$before_stale = Post_Meta::get( $page_b );
+	$before_stale = PostMeta::get( $page_b );
 	ahfcm_submit_meta_box( $page_b, array( '_schema' => null, 'slots' => array( 'head' => array( 'code' => '' ) ), 'enabled' => '0' ) );
-	ahfcm_check( 'Meta box form without the current format version is ignored', Post_Meta::get( $page_b ) === $before_stale );
+	ahfcm_check( 'Meta box form without the current format version is ignored', PostMeta::get( $page_b ) === $before_stale );
 	ahfcm_submit_meta_box( $page_b, array( '_schema' => 1, 'slots' => array( 'head' => array( 'code' => '' ) ) ) );
-	ahfcm_check( 'Meta box form from an older format version is ignored', Post_Meta::get( $page_b ) === $before_stale );
+	ahfcm_check( 'Meta box form from an older format version is ignored', PostMeta::get( $page_b ) === $before_stale );
 	$res = $ahfcm_rest( 'POST', 'post/' . $page_b, array( 'schema' => null, 'data' => array( 'enabled' => false, 'slots' => array() ) ) );
-	ahfcm_check( 'REST save without the format version is refused (409) and changes nothing', 409 === $res->get_status() && Post_Meta::get( $page_b ) === $before_stale );
+	ahfcm_check( 'REST save without the format version is refused (409) and changes nothing', 409 === $res->get_status() && PostMeta::get( $page_b ) === $before_stale );
 	$res = $ahfcm_rest( 'POST', 'global', array( 'schema' => 2, 'data' => array( 'enabled' => false ) ) );
 	ahfcm_check( 'REST global save from an old panel is refused (409)', 409 === $res->get_status() );
 	$stored_global       = Settings::get();
@@ -581,14 +599,14 @@ try {
 	WP_CLI::line( 'Revisions' );
 	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- REV-1 -->' ) ) ) );
 	$_POST = array(
-		Post_Meta::NONCE_FIELD => wp_create_nonce( Post_Meta::NONCE_PREFIX . $page_b ),
-		Post_Meta::FORM_FIELD  => wp_slash( array( '_schema' => Settings::SCHEMA_VERSION, 'slots' => array( 'head' => array( 'code' => '<!-- REV-2 -->' ) ) ) ),
+		PostMeta::NONCE_FIELD => wp_create_nonce( PostMeta::NONCE_PREFIX . $page_b ),
+		PostMeta::FORM_FIELD  => wp_slash( array( '_schema' => Settings::SCHEMA_VERSION, 'slots' => array( 'head' => array( 'code' => '<!-- REV-2 -->' ) ) ) ),
 	);
 	wp_update_post( array( 'ID' => $page_b, 'post_content' => 'rev ' . wp_rand() ) );
 	$_POST     = array();
 	$revisions = wp_get_post_revisions( $page_b );
 	$latest    = $revisions ? reset( $revisions ) : null;
-	$rev_meta  = $latest ? get_post_meta( $latest->ID, Post_Meta::META_KEY, true ) : null;
+	$rev_meta  = $latest ? get_post_meta( $latest->ID, PostMeta::META_KEY, true ) : null;
 	ahfcm_check( 'Per-post code is captured in post revisions', is_array( $rev_meta ) && '<!-- REV-2 -->' === $rev_meta['slots']['head']['html'] );
 
 	WP_CLI::line( 'Migration' );
@@ -599,33 +617,33 @@ try {
 	update_post_meta( $legacy_post, '_page_header_code', '<!-- LEGACY-ONLY -->' );
 	update_post_meta( $legacy_post, '_page_body_code', '<!-- LEGACY-ONLY-BODY -->' );
 
-	$dry = Migration::run( array( 'dry_run' => true ) );
-	ahfcm_check( 'Dry run changes nothing', '' === Post_Meta::get( $legacy_post )['slots']['head']['html'] );
+	$dry = LegacyImport::run( array( 'dry_run' => true ) );
+	ahfcm_check( 'Dry run changes nothing', '' === PostMeta::get( $legacy_post )['slots']['head']['html'] );
 	$rows = wp_list_filter( $dry, array( 'post_id' => $page_b ) );
 	ahfcm_check( 'Slot with different code is reported as conflict (no overwrite)', in_array( 'skipped_conflict', wp_list_pluck( $rows, 'status' ), true ) );
 	ahfcm_check( 'Backslash difference vs. old stripslashes() output is flagged', (bool) array_filter( wp_list_pluck( $rows, 'notes' ) ) );
 
-	$run  = Migration::run( array( 'dry_run' => false ) );
-	$lp   = Post_Meta::get( $legacy_post );
+	$run  = LegacyImport::run( array( 'dry_run' => false ) );
+	$lp   = PostMeta::get( $legacy_post );
 	ahfcm_check( 'Import copies legacy code (body → footer), disabled', '<!-- LEGACY-ONLY -->' === $lp['slots']['head']['html'] && '<!-- LEGACY-ONLY-BODY -->' === $lp['slots']['footer']['html'] && ! $lp['slots']['head']['enabled'] );
 	ahfcm_check( 'Import reports success', in_array( 'imported', wp_list_pluck( $run, 'status' ), true ) && ! in_array( 'failed', wp_list_pluck( $run, 'status' ), true ) );
 	ahfcm_check( 'Imported-but-disabled code does not change front-end output', false === strpos( ahfcm_fetch( get_permalink( $legacy_post ) ), '<!-- AHFCM head (post' ) );
-	$again = Migration::run( array( 'dry_run' => false ) );
-	$lp2   = Post_Meta::get( $legacy_post );
+	$again = LegacyImport::run( array( 'dry_run' => false ) );
+	$lp2   = PostMeta::get( $legacy_post );
 	ahfcm_check( 'Re-running import does not duplicate code', $lp2 === $lp && in_array( 'already_imported', wp_list_pluck( $again, 'status' ), true ) );
-	Migration::run( array( 'dry_run' => false, 'enable' => true ) );
-	ahfcm_check( 'Import with "enable" switches imported slots on', Post_Meta::get( $legacy_post )['slots']['head']['enabled'] );
+	LegacyImport::run( array( 'dry_run' => false, 'enable' => true ) );
+	ahfcm_check( 'Import with "enable" switches imported slots on', PostMeta::get( $legacy_post )['slots']['head']['enabled'] );
 	ahfcm_check( 'Legacy meta is never modified', '<!-- LEGACY-ONLY -->' === get_post_meta( $legacy_post, '_page_header_code', true ) );
 
 	WP_CLI::line( 'Deactivate / reactivate' );
 	$snapshot_global = Settings::get();
-	$snapshot_post   = Post_Meta::get( $page_a );
+	$snapshot_post   = PostMeta::get( $page_a );
 	deactivate_plugins( 'advanced-header-footer-code-manager/advanced-header-footer-code-manager.php', true );
-	ahfcm_check( 'Data present while deactivated', is_array( get_option( Settings::OPTION ) ) && metadata_exists( 'post', $page_a, Post_Meta::META_KEY ) );
+	ahfcm_check( 'Data present while deactivated', is_array( get_option( Settings::OPTION ) ) && metadata_exists( 'post', $page_a, PostMeta::META_KEY ) );
 	activate_plugin( 'advanced-header-footer-code-manager/advanced-header-footer-code-manager.php' );
 	Settings::flush_cache();
 	wp_cache_flush();
-	ahfcm_check( '9 Code survives deactivation and reactivation', Settings::get() === $snapshot_global && Post_Meta::get( $page_a ) === $snapshot_post );
+	ahfcm_check( '9 Code survives deactivation and reactivation', Settings::get() === $snapshot_global && PostMeta::get( $page_a ) === $snapshot_post );
 } catch ( \Throwable $e ) {
 	ahfcm_check( 'Suite ran without exceptions', false, $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() );
 } finally {

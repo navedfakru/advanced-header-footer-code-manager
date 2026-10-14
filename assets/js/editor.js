@@ -856,7 +856,8 @@
 			$( '[data-ahfcm-panel]' ).each( function () {
 				this.hidden = this.getAttribute( 'data-ahfcm-panel' ) !== name;
 			} );
-			$( '[data-ahfcm-submit]' ).prop( 'hidden', name !== 'code' && name !== 'settings' );
+			// Save only applies to sections inside the settings form.
+			$( '[data-ahfcm-submit]' ).prop( 'hidden', ! $( '[data-ahfcm-panel="' + name + '"]' ).closest( 'form' ).length );
 			fields.forEach( function ( f ) {
 				if ( f.cm ) {
 					f.cm.refresh();

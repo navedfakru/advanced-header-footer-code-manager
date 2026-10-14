@@ -1,26 +1,25 @@
 === Advanced Header & Footer Code Manager ===
 Contributors: naved
-Tags: header, footer, code, scripts, codemirror
+Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add trusted code to <head> and before </body> — site-wide or per post/page — with a CodeMirror editor.
+Add trusted HTML, CSS and JavaScript to <head> and before </body> — site-wide, per page, or per Breakdance/Oxygen template — from the block editor, the builder or a modern settings app.
 
 == Description ==
 
-* Two locations: Header (wp_head) and Footer (wp_footer).
-* Global code in Settings → Header & Footer Code, plus a "Header & Body Code Embed" box on posts, pages and public custom post types.
-* Global and page code are combined (global first). Each page can opt out of global code. Every editor has its own on/off switch.
-* Editor: syntax highlighting, autocomplete, linting, folding, search/replace, auto-closing tags, inline CSS color picker, safe formatting, full screen, dark/light themes. Uses the CodeMirror bundled with WordPress.
-* HTML, CSS and JS tabs in every slot, all used together (CSS in <style>, then HTML, then JS in <script>). PHP is never executed.
-* Only users with unfiltered_html can edit code. Nothing is exposed via the REST API.
-* Revisions for per-post code, history for global code, optional import from "Page Header & Body Code Embed" v3.0.
+* Two locations, Header (wp_head) and Footer (wp_footer), each with HTML, CSS and JS tabs used together.
+* Global code, per-page code, and code on Breakdance/Oxygen templates, headers, footers, popups and global blocks (runs on every page that uses them).
+* Edit from a code icon in the block editor toolbar, a code button in the Breakdance/Oxygen top bar, the Classic editor box, or Settings → Header & Footer Code.
+* CodeMirror editor (bundled with WordPress): autocomplete, linting, folding, search/replace, safe formatting, inline CSS color picker, full screen, dark/light themes.
+* Only users with unfiltered_html can edit code. PHP is never executed.
+* Integrations: Gutenberg, Breakdance, Oxygen 6.
 
-See README.md for full documentation, the security model, migration and rollback.
+See README.md for documentation, file structure, hooks and the security model.
 
 == Installation ==
 
@@ -39,6 +38,14 @@ No. Code is only deleted on plugin deletion, and only if you enabled "Permanentl
 No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
 == Changelog ==
+
+= 2.2.0 =
+* New WindPress-style code structure: namespaced classes in src/ (Core, Admin, Api, Editor, Integration) with a built-in autoloader; views/ for templates; assets split into editor, panel, settings app and integration files.
+* Integrations layer (Gutenberg, Breakdance, Oxygen) with an Integrations screen: detection status and an on/off switch per integration. Add more via the ahfcm_integrations filter.
+* Oxygen 6 support: builder button (?oxygen=builder), code on oxygen_template/header/footer/block and popups, global block and popup detection from _oxygen_data.
+* Modern settings app: sticky top bar with status and Save, sidebar navigation (Global code, Integrations, Output, Editor, Tools, Help).
+* No data changes; 1.1.x settings and code carry over.
+
 
 = 1.1.1 =
 * Breakdance integration: Header & Footer Code button in the builder top bar, with This page / Global panel.
