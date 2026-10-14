@@ -291,6 +291,33 @@ try {
 	}
 	ahfcm_check( 'Settings page submits each global position field exactly once (Output tab)', $named_ok );
 	ahfcm_check( 'Output tab and Global code card share a sync key per slot', 4 === ahfcm_count( $settings_html, 'data-ahfcm-sync="global-head"' ) && 4 === ahfcm_count( $settings_html, 'data-ahfcm-sync="global-footer"' ) );
+
+	WP_CLI::line( 'GitHub updates (offline)' );
+	$gh_base  = 'https://github.com/' . AHFCM\Core\Updater::REPO . '/releases/download/v9.9.9/';
+	$gh_good  = array(
+		'tag_name'     => 'v9.9.9',
+		'html_url'     => 'https://github.com/' . AHFCM\Core\Updater::REPO . '/releases/tag/v9.9.9',
+		'body'         => "Notes <script>x</script>",
+		'published_at' => '2026-10-15T00:00:00Z',
+		'assets'       => array(
+			array( 'name' => 'notes.txt', 'browser_download_url' => $gh_base . 'notes.txt' ),
+			array( 'name' => 'advanced-header-footer-code-manager-9.9.9.zip', 'browser_download_url' => $gh_base . 'advanced-header-footer-code-manager-9.9.9.zip' ),
+		),
+	);
+	$gh_parsed = AHFCM\Core\Updater::parse( $gh_good );
+	ahfcm_check( 'Release parsed: tag v9.9.9 → 9.9.9, plugin zip asset chosen', is_array( $gh_parsed ) && '9.9.9' === $gh_parsed['version'] && $gh_base . 'advanced-header-footer-code-manager-9.9.9.zip' === $gh_parsed['package'] );
+	ahfcm_check( 'Drafts, pre-releases, bad tags and releases without the zip are ignored', null === AHFCM\Core\Updater::parse( array_merge( $gh_good, array( 'prerelease' => true ) ) ) && null === AHFCM\Core\Updater::parse( array_merge( $gh_good, array( 'draft' => true ) ) ) && null === AHFCM\Core\Updater::parse( array_merge( $gh_good, array( 'tag_name' => 'latest' ) ) ) && null === AHFCM\Core\Updater::parse( array_merge( $gh_good, array( 'assets' => array() ) ) ) );
+	ahfcm_check( 'Zip from another host or repo is refused', null === AHFCM\Core\Updater::parse( array_merge( $gh_good, array( 'assets' => array( array( 'name' => 'advanced-header-footer-code-manager.zip', 'browser_download_url' => 'https://evil.example/advanced-header-footer-code-manager.zip' ) ) ) ) ) );
+
+	set_site_transient( AHFCM\Core\Updater::CACHE_KEY, $gh_parsed, HOUR_IN_SECONDS );
+	$gh_update = apply_filters( 'update_plugins_github.com', false, get_plugin_data( AHFCM_FILE, false, false ), AHFCM\Core\Updater::basename(), array() );
+	ahfcm_check( 'update_plugins_github.com offers the newer release', is_array( $gh_update ) && '9.9.9' === $gh_update['version'] && $gh_parsed['package'] === $gh_update['package'] );
+	ahfcm_check( 'Other plugins are left alone', false === apply_filters( 'update_plugins_github.com', false, array(), 'other/other.php', array() ) );
+	ahfcm_check( 'Plugin header declares the GitHub Update URI', 'https://github.com/' . AHFCM\Core\Updater::REPO === get_plugin_data( AHFCM_FILE, false, false )['UpdateURI'] );
+	$gh_info = apply_filters( 'plugins_api', false, 'plugin_information', (object) array( 'slug' => AHFCM\Core\Updater::SLUG ) );
+	ahfcm_check( '"View details" shows the release with escaped notes', is_object( $gh_info ) && '9.9.9' === $gh_info->version && false === strpos( $gh_info->sections['changelog'], '<script>' ) );
+	AHFCM\Core\Updater::flush();
+	ahfcm_check( 'Cache cleared after updates', false === get_site_transient( AHFCM\Core\Updater::CACHE_KEY ) );
 	$legacy_shape                               = Settings::get();
 	$legacy_shape['slots']['body_open']['html'] = '<!-- OLD-1.0-BODY -->';
 	update_option( Settings::OPTION, $legacy_shape );
