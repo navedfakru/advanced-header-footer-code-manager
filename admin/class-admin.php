@@ -92,6 +92,14 @@ final class Admin {
 			return;
 		}
 
+		// In the block editor the toolbar panel replaces the meta box, which
+		// also keeps the "Meta Boxes" area away when nothing else uses it.
+		// The box stays when the panel is unavailable (icon off or hidden for
+		// this user), since it is then the only way to edit the code.
+		if ( self::panel_replaces_meta_box( $post ) ) {
+			return;
+		}
+
 		add_meta_box(
 			self::META_BOX_ID,
 			__( 'Header & Body Code Embed', 'advanced-header-footer-code-manager' ),
@@ -100,6 +108,27 @@ final class Admin {
 			'normal',
 			'default'
 		);
+	}
+
+	/**
+	 * Whether the block-editor panel is used instead of the meta box.
+	 *
+	 * @param \WP_Post $post Post being edited.
+	 * @return bool
+	 */
+	public static function panel_replaces_meta_box( $post ) {
+		$replace = function_exists( 'use_block_editor_for_post' )
+			&& use_block_editor_for_post( $post )
+			&& Breakdance::button_visible_for( null, 'editor' );
+
+		/**
+		 * Filters whether the meta box is hidden in the block editor (where the
+		 * toolbar panel edits the same code). Return false to show both.
+		 *
+		 * @param bool     $replace Whether the panel replaces the meta box.
+		 * @param \WP_Post $post    Post.
+		 */
+		return (bool) apply_filters( 'ahfcm_panel_replaces_meta_box', $replace, $post );
 	}
 
 	/**
@@ -137,108 +166,48 @@ final class Admin {
 			return;
 		}
 
-		$settings = Settings::get();
-		$editors  = array();
+		UI::enqueue_editor();
+		$this->enqueue_toolbar_button();
+	}
 
-		$common = array(
-			'indentUnit'        => 2,
-			'tabSize'           => 2,
-			'indentWithTabs'    => false,
-			'lineWrapping'      => false,
-			'lineNumbers'       => true,
-			'foldGutter'        => true,
-			'gutters'           => array( 'CodeMirror-lint-markers', 'CodeMirror-linenumbers', 'CodeMirror-foldgutter' ),
-			'matchBrackets'     => true,
-			'autoCloseBrackets' => true,
-			'styleActiveLine'   => true,
-			'lint'              => true,
-			'theme'             => 'dark' === $settings['editor_theme'] ? 'ahfcm-dark' : 'default',
-		);
-
-		$types = array(
-			'html'       => array(
-				'type'       => 'text/html',
-				'codemirror' => array(
-					'mode'          => 'htmlmixed',
-					'autoCloseTags' => true,
-					'matchTags'     => array( 'bothTags' => true ),
-				),
-			),
-			'css'        => array(
-				'type'       => 'text/css',
-				'codemirror' => array( 'mode' => 'css' ),
-			),
-			'javascript' => array(
-				'type'       => 'text/javascript',
-				'codemirror' => array( 'mode' => 'javascript' ),
-			),
-		);
-
-		foreach ( $types as $language => $args ) {
-			$args['codemirror'] = array_merge( $common, $args['codemirror'] );
-			$editor_settings    = wp_enqueue_code_editor( $args );
-
-			// False when the user turned off syntax highlighting in their profile.
-			if ( false === $editor_settings ) {
-				$editors = false;
-				break;
-			}
-			$editors[ $language ] = $editor_settings;
+	/**
+	 * Adds the code icon to the block editor's top toolbar. It opens the
+	 * "Header & Body Code Embed" meta box (the single place this post's code
+	 * is edited on this screen, so nothing can be saved twice).
+	 *
+	 * @return void
+	 */
+	private function enqueue_toolbar_button() {
+		$screen = get_current_screen();
+		$post   = isset( $GLOBALS['post'] ) && $GLOBALS['post'] instanceof \WP_Post ? $GLOBALS['post'] : null;
+		if ( ! $screen || ! $post || ! method_exists( $screen, 'is_block_editor' ) || ! $screen->is_block_editor() ) {
+			return;
+		}
+		if ( ! Breakdance::button_visible_for( null, 'editor' ) ) {
+			return;
 		}
 
-		wp_enqueue_style( 'ahfcm-admin', AHFCM_URL . 'assets/css/admin.css', false === $editors ? array() : array( 'code-editor' ), AHFCM_VERSION );
+		$data     = Post_Meta::get( $post->ID );
+		$has_code = $data['enabled'] && ( Settings::slot_has_code( $data['slots']['head'] ) || Settings::slot_has_code( $data['slots']['footer'] ) );
 
-		wp_register_script( 'ahfcm-beautifier', AHFCM_URL . 'assets/vendor/js-beautify/beautifier.min.js', array(), '1.15.4', true );
-		wp_register_script( 'ahfcm-core', AHFCM_URL . 'assets/js/core.js', array(), AHFCM_VERSION, true );
-		wp_enqueue_script(
-			'ahfcm-editor',
-			AHFCM_URL . 'assets/js/editor.js',
-			false === $editors ? array( 'jquery', 'wp-a11y', 'ahfcm-core', 'ahfcm-beautifier' ) : array( 'jquery', 'wp-a11y', 'code-editor', 'ahfcm-core', 'ahfcm-beautifier' ),
-			AHFCM_VERSION,
-			true
+		// The same panel as in the Breakdance builder, synced with the meta box.
+		$can_global = Security::can_manage_global();
+		Breakdance::enqueue_panel( $post->ID, $can_global, 'editor' );
+		add_action(
+			'admin_footer',
+			static function () use ( $can_global ) {
+				Breakdance::render_panel_template( true, $can_global );
+			}
 		);
 
+		wp_enqueue_script( 'ahfcm-toolbar', AHFCM_URL . 'assets/js/toolbar.js', array( 'wp-data', 'wp-dom-ready', 'ahfcm-builder' ), AHFCM_VERSION, true );
 		wp_add_inline_script(
-			'ahfcm-editor',
-			'window.AHFCM_EDITOR = ' . wp_json_encode(
+			'ahfcm-toolbar',
+			'window.AHFCM_TOOLBAR = ' . wp_json_encode(
 				array(
-					'editors' => $editors,
-					'height'  => $settings['editor_height'],
-					'theme'   => $settings['editor_theme'],
-					'i18n'    => array(
-						'formatted'        => __( 'Code formatted.', 'advanced-header-footer-code-manager' ),
-						'unchanged'        => __( 'Code is already formatted.', 'advanced-header-footer-code-manager' ),
-						'empty'            => __( 'Nothing to format.', 'advanced-header-footer-code-manager' ),
-						'noFormatter'      => __( 'The formatter did not load, so the code was not changed.', 'advanced-header-footer-code-manager' ),
-						'unsafeFormat'     => __( 'Formatting was cancelled because it would change more than whitespace. Your code was not modified.', 'advanced-header-footer-code-manager' ),
-						'phpNotFormatted'  => __( 'This snippet contains PHP tags. PHP is not formatted or executed; the code was not changed.', 'advanced-header-footer-code-manager' ),
-						/* translators: %s: error message from the formatter. */
-						'formatError'      => __( 'The formatter failed: %s. Your code was not modified.', 'advanced-header-footer-code-manager' ),
-						'noIssues'         => __( 'No problems found', 'advanced-header-footer-code-manager' ),
-						/* translators: 1: number of errors, 2: number of warnings. */
-						'issues'           => __( '%1$d error(s), %2$d warning(s)', 'advanced-header-footer-code-manager' ),
-						'unsaved'          => __( 'You have unsaved code changes.', 'advanced-header-footer-code-manager' ),
-						/* translators: %s: language name. */
-						'languageSwitched' => __( 'Editor language changed to %s.', 'advanced-header-footer-code-manager' ),
-						'exitFullscreen'   => __( 'Exit full screen', 'advanced-header-footer-code-manager' ),
-						'fullscreen'       => __( 'Full screen', 'advanced-header-footer-code-manager' ),
-						/* translators: 1: line number, 2: column number. */
-						'cursor'           => __( 'Ln %1$d, Col %2$d', 'advanced-header-footer-code-manager' ),
-						/* translators: %d: number of lines. */
-						'lines'            => __( '%d lines', 'advanced-header-footer-code-manager' ),
-						'languages'        => self::language_labels(),
-						'pickColor'        => __( 'Pick color', 'advanced-header-footer-code-manager' ),
-						'hue'              => __( 'Hue', 'advanced-header-footer-code-manager' ),
-						'opacity'          => __( 'Opacity', 'advanced-header-footer-code-manager' ),
-						'saturation'       => __( 'Saturation and brightness', 'advanced-header-footer-code-manager' ),
-						'colorValue'       => __( 'Color value', 'advanced-header-footer-code-manager' ),
-						'eyedropper'       => __( 'Pick from screen', 'advanced-header-footer-code-manager' ),
-						'diagnostics'      => array(
-							'php'        => __( 'PHP tags are not executed; they will be sent to the browser as text.', 'advanced-header-footer-code-manager' ),
-							'wrappedTag' => __( 'This mode wraps your code in a tag automatically. Remove the tags or switch the language to HTML.', 'advanced-header-footer-code-manager' ),
-							'needsTags'  => __( 'This looks like bare CSS or JavaScript. Switch the language so it is wrapped in the right tag, or add the tags yourself.', 'advanced-header-footer-code-manager' ),
-						),
-					),
+					'boxId'   => self::META_BOX_ID,
+					'hasCode' => $has_code,
+					'label'   => __( 'Header & Footer Code', 'advanced-header-footer-code-manager' ),
 				)
 			) . ';',
 			'before'
@@ -246,36 +215,21 @@ final class Admin {
 	}
 
 	/**
-	 * Language labels for selects and badges.
+	 * Language labels.
 	 *
 	 * @return array<string,string>
 	 */
 	public static function language_labels() {
-		return array(
-			'html'       => __( 'HTML', 'advanced-header-footer-code-manager' ),
-			'css'        => __( 'CSS', 'advanced-header-footer-code-manager' ),
-			'javascript' => __( 'JS', 'advanced-header-footer-code-manager' ),
-		);
+		return UI::language_labels();
 	}
 
 	/**
-	 * Location labels/descriptions.
+	 * Location labels.
 	 *
-	 * @return array<string,array{label:string,description:string}>
+	 * @return array
 	 */
 	public static function slot_labels() {
-		return array(
-			'head'   => array(
-				'label'       => __( 'Header Code', 'advanced-header-footer-code-manager' ),
-				'where'       => '<head>',
-				'description' => __( 'Printed by wp_head, before </head>. Meta and verification tags, analytics loaders, preload hints, CSS.', 'advanced-header-footer-code-manager' ),
-			),
-			'footer' => array(
-				'label'       => __( 'Footer Code', 'advanced-header-footer-code-manager' ),
-				'where'       => '</body>',
-				'description' => __( 'Printed by wp_footer, after footer scripts and before </body>. Chat widgets, tag-manager noscript, scripts that need the page loaded.', 'advanced-header-footer-code-manager' ),
-			),
-		);
+		return UI::slot_labels();
 	}
 
 	/**
@@ -315,20 +269,17 @@ final class Admin {
 	}
 
 	/**
-	 * Renders one editor field. Shared by both screens.
+	 * Renders one editor field.
 	 *
 	 * @param string $id         Element ID.
-	 * @param string $name_base  Form name prefix, e.g. ahfcm[slots][head].
+	 * @param string $name_base  Form name prefix.
 	 * @param string $slot       Slot key.
-	 * @param array  $data       Slot data (code, enabled, language).
-	 * @param string $scope_note Short scope reminder.
+	 * @param array  $data       Slot data.
+	 * @param string $scope_note Scope reminder.
 	 * @return void
 	 */
 	public static function render_field( $id, $name_base, $slot, array $data, $scope_note ) {
-		$labels    = self::slot_labels();
-		$languages = self::language_labels();
-
-		include AHFCM_DIR . 'admin/views/editor-field.php';
+		UI::render_field( $id, $name_base, $slot, $data, $scope_note );
 	}
 
 	/**

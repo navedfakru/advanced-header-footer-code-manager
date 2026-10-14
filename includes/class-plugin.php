@@ -58,6 +58,8 @@ final class Plugin {
 		( new Settings() )->register();
 		( new Post_Meta() )->register();
 		( new Frontend() )->register();
+		( new Rest() )->register();
+		( new Breakdance() )->register();
 
 		if ( is_admin() ) {
 			( new Admin() )->register();

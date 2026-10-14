@@ -85,7 +85,7 @@
 		if ( containsPhp( src ) ) {
 			warnings.push( 'php' );
 		}
-		if ( ( language === 'css' || language === 'javascript' ) && /<\/?(script|style|div|meta|link|noscript|iframe)\b/i.test( src ) ) {
+		if ( ( language === 'css' || language === 'javascript' || language === 'js' ) && /<\/?(script|style|div|meta|link|noscript|iframe)\b/i.test( src ) ) {
 			warnings.push( 'wrappedTag' );
 		}
 		if ( language === 'html' && detectLanguage( src ) !== 'html' && ! /</.test( src ) ) {
@@ -110,7 +110,8 @@
 		if ( containsPhp( src ) ) {
 			return { status: 'php', code: src };
 		}
-		var fn = beautifier && ( language === 'css' ? beautifier.css : language === 'javascript' ? beautifier.js : beautifier.html );
+		var isJs = language === 'javascript' || language === 'js';
+		var fn = beautifier && ( language === 'css' ? beautifier.css : isJs ? beautifier.js : beautifier.html );
 		if ( typeof fn !== 'function' ) {
 			return { status: 'noFormatter', code: src };
 		}

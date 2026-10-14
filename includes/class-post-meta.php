@@ -7,7 +7,7 @@
  *     version          int
  *     enabled          bool  Master switch for this post's code.
  *     suppress_global  bool  Skip global code on this post.
- *     slots[head|footer] { code, enabled, language }
+ *     slots[head|footer] { html, css, js, enabled }
  *
  * The meta is not exposed through the REST API. It is saved by the meta box,
  * which works in both the Classic and the block editor (the block editor
@@ -51,6 +51,9 @@ final class Post_Meta {
 		$selected = Settings::get()['post_types'];
 
 		$types = null === $selected ? array_diff( $public, array( 'attachment' ) ) : array_intersect( $selected, $public );
+
+		// Breakdance templates, headers, footers and popups (not public types).
+		$types = array_merge( array_values( $types ), Breakdance::enabled_template_types() );
 
 		/**
 		 * Filters post types that support per-post header/footer code.
@@ -117,9 +120,10 @@ final class Post_Meta {
 		$slots = array();
 		foreach ( Settings::SLOTS as $slot ) {
 			$slots[ $slot ] = array(
-				'code'     => '',
-				'enabled'  => true,
-				'language' => 'html',
+				'html'    => '',
+				'css'     => '',
+				'js'      => '',
+				'enabled' => true,
 			);
 		}
 
@@ -177,7 +181,7 @@ final class Post_Meta {
 			return false;
 		}
 		foreach ( Settings::SLOTS as $slot ) {
-			if ( '' !== $data['slots'][ $slot ]['code'] || ! $data['slots'][ $slot ]['enabled'] || 'html' !== $data['slots'][ $slot ]['language'] ) {
+			if ( Settings::slot_has_code( $data['slots'][ $slot ] ) || ! $data['slots'][ $slot ]['enabled'] ) {
 				return false;
 			}
 		}
@@ -237,6 +241,11 @@ final class Post_Meta {
 		// Raw code is intentional: only users with unfiltered_html reach this point.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- normalized below.
 		$raw = wp_unslash( $_POST[ self::FORM_FIELD ] );
+
+		// Ignore forms rendered before a data-format upgrade (see Settings::sanitize()).
+		if ( ! is_array( $raw ) || ! isset( $raw['_schema'] ) || (int) $raw['_schema'] !== Settings::SCHEMA_VERSION ) {
+			return;
+		}
 
 		self::save( $post_id, is_array( $raw ) ? $raw : array() );
 	}

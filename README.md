@@ -6,10 +6,14 @@ linting and safe formatting.
 
 | Field | Hook | Default priority | Where it ends up |
 |---|---|---|---|
-| **Header Code** | `wp_head` | 10 | inside `<head>`, after enqueued styles |
-| **Footer Code** | `wp_footer` | 100 | before `</body>`, after footer scripts |
+| **Header Code** | `wp_head` | 1000001 | end of `<head>`, after theme and Breakdance CSS |
+| **Footer Code** | `wp_footer` | 1000001 | end of `<body>`, after footer scripts and Breakdance JS |
 
 Priorities can be changed in **Settings → Header & Footer Code → Settings**.
+Breakdance prints its CSS/JS at priority 1000000, so the default 1000001
+makes your CSS override builder styles (same-specificity rules win by
+order) and lets scripts use builder libraries. Sites upgraded from 1.0/1.1
+with the old defaults (10/100) are moved automatically; custom values stay.
 
 - Slug / text domain: `advanced-header-footer-code-manager`
 - Requires: WordPress 6.4+, PHP 7.4+ (developed on WP 7.1.3, PHP 8.2.29)
@@ -64,19 +68,25 @@ and footer code. Anything that used to go right after `<body>` (for example
 a tag-manager `<noscript>` iframe) works in Footer Code. Body-start data saved
 by 1.0.0 is dropped on upgrade and never printed.
 
-## Languages
+## HTML, CSS and JS together
 
-Each editor has a language selector:
+Every slot (Header Code, Footer Code) has three tabs that are **all used at
+the same time**:
 
-- **HTML** (default) — output exactly as written. Mixed `<style>`/`<script>`
-  blocks are highlighted, linted and autocompleted per block.
-- **CSS** — pure CSS, wrapped in `<style>…</style>` automatically.
-- **JavaScript** — pure JS, wrapped in `<script>…</script>` automatically.
+| Tab | What to put there | Output |
+|---|---|---|
+| **HTML** | tags, `<script src>`, `<link>`, `<meta>`, JSON-LD, noscript… | exactly as written |
+| **CSS** | plain CSS rules | wrapped in `<style>` |
+| **JS** | plain JavaScript | wrapped in `<script>` |
 
-**PHP is not supported and never executed** (no `eval()`). PHP tags typed into
-an editor are sent to the browser as text, and the editor warns you about it.
-Running PHP needs a separate, privileged execution model, which this plugin
-deliberately doesn't provide. Use WPCodeBox or a custom plugin for PHP.
+Each slot prints **CSS → HTML → JS**, so styles apply first and scripts run
+after the markup. A dot on a tab shows it has code; empty tabs print nothing.
+Format, full screen, lint, autocomplete and the color picker act on the open
+tab. Data saved by 1.1.0 (one code box + language) is converted into the
+matching tab automatically.
+
+PHP is never executed (no `eval()`); PHP tags would be sent to the browser
+as text, and the editor warns about it.
 
 ## Editor features
 
@@ -171,13 +181,80 @@ No custom table is used. Two code fields per post and one option don't need one.
 
 ## Breakdance
 
-- Breakdance's page shell calls `wp_head` and `wp_footer`, so
-  both locations work on Breakdance-rendered pages (verified on
-  Breakdance 3.0.0-rc.1).
-- Edit per-page code from the normal WordPress edit screen (**Pages → Edit**).
-  The box is not inside the Breakdance visual builder.
-- Code is not injected inside the builder by default, so analytics don't count
-  your own design sessions.
+- Breakdance's page shell calls `wp_head` and `wp_footer`, so both locations
+  work on Breakdance-rendered pages (verified on Breakdance 3.0.0-rc.1).
+- Code is not injected inside the builder preview by default, so analytics
+  don't count your own design sessions (Settings → Page builders).
+
+### Builder button (1.1.1)
+
+Inside the Breakdance builder, a **code icon** sits in the top bar right after
+the properties (pencil) button. It opens a **Header & Footer Code** panel with:
+
+- **This page**: the open document's Header and Footer code, its on/off
+  switch and "Skip global code" (same data as the WordPress edit screen's box).
+- **Global**: site-wide code and the master switch (administrators only).
+
+It has the same editors as wp-admin (autocomplete, lint, format, color picker,
+full screen). Save with the **Save** button or `Ctrl/Cmd+S`; Esc or the ✕
+closes it and warns about unsaved changes. Keystrokes inside the panel don't
+trigger Breakdance shortcuts.
+
+### Toolbar buttons (builder and block editor)
+
+- **Breakdance builder**: code icon after the properties button; opens the
+  Header & Footer Code panel.
+- **Block editor**: code icon after “Edit in Breakdance” (or at the end of the
+  toolbar); a dot means this page has code. It opens **the same panel as in
+  the builder** (This page / Global tabs). The panel reads the page's current
+  values from the **Header & Body Code Embed** box (including unsaved edits)
+  and, after Save, writes them back into that box — so a later Update posts
+  the same values and can never overwrite the panel's changes.
+  In the block editor the meta box itself is not added (so the “Meta Boxes”
+  area disappears when nothing else uses it); the panel saves directly. The
+  box is still used in the Classic editor, and in the block editor when the
+  editor icon is switched off or hidden for that user. Filter:
+  `ahfcm_panel_replaces_meta_box( bool $replace, WP_Post $post )`.
+
+Settings → Header & Footer Code → Settings → **Toolbar buttons**: a switch per
+button, plus shared **Show for these roles** and **Hide for these users**
+conditions. Hiding only affects the buttons — code keeps running and access
+in wp-admin follows capabilities. Filter: `ahfcm_breakdance_button_visible(
+bool $visible, WP_User $user, string $where )` (`builder` or `editor`).
+
+### Templates, headers, footers, popups and global blocks
+
+Breakdance's own documents can carry code too (Settings → **Breakdance
+templates**; all on by default). Open one in the builder and the first tab
+becomes **This template / header / footer / popup / global block**. Its code
+runs on **every page that uses it**:
+
+| Type | Runs on |
+|---|---|
+| Template | pages rendered with it (incl. nested templates) |
+| Header / Footer | pages where Breakdance shows it |
+| Popup | pages where its display rules match, **and** pages that open it (button/link/interaction/form “open popup” action) — even if its display rules are disabled |
+| Global block | pages that embed it via the Global Block element, a loop or a menu custom area (nested blocks too) |
+
+Output order in each location: global → header → template(s) → footer →
+popups → global blocks → the page itself. Each document's own switches
+(enabled, per-slot, "Skip global code") work as on pages.
+
+Detection uses the same functions Breakdance's admin bar uses
+(`ThemelessController`, `_getTemplateForRequest`) and reads global-block
+references from the page's Breakdance data before `<head>` is printed; footer
+output also includes blocks Breakdance actually rendered (shortcodes, dynamic
+content). If a future Breakdance version changes these internals, this part
+returns nothing and global/per-page code keep working. Override with the
+`ahfcm_breakdance_active_documents` and `ahfcm_breakdance_global_blocks` filters.
+
+How it works: assets are printed on Breakdance's builder footer action
+(`unofficial_i_am_kevin_geary_master_of_all_things_css_and_html`, the same
+hook WindPress uses). The button is mounted next to
+`.open-properties-toolbar-button` and re-mounted if the toolbar re-renders.
+Data is saved through private REST routes (`ahfcm/v1/post/{id}`,
+`ahfcm/v1/global`) using the same capability checks as wp-admin. Disable the
+integration with `add_filter( 'ahfcm_breakdance_integration', '__return_false' );`.
 
 ## Migration from "Page Header & Body Code Embed" v3.0 (WPCodeBox snippet #7)
 
@@ -244,6 +321,10 @@ only they can edit code. That is intentional.
 | `ahfcm_snippet_output( string $code, string $slot, string $source, int $post_id )` | filter | Change or drop one snippet (`$source` is `global` or `post`) |
 | `ahfcm_post_types( string[] $types )` | filter | Post types with per-post code |
 | `ahfcm_builder_query_params( string[] $params )` | filter | Query args that mark builder requests |
+| `ahfcm_breakdance_integration( bool $enabled )` | filter | Turn the Breakdance builder button off |
+| `ahfcm_breakdance_active_documents( int[] $ids )` | filter | Breakdance templates/header/footer/popups applied to the request |
+| `ahfcm_breakdance_global_blocks( int[] $ids, int[] $docs, string $slot )` | filter | Global blocks applied to the request |
+| `ahfcm_breakdance_referenced_popups( int[] $ids, int[] $docs, string $slot )` | filter | Popups opened by the request's documents |
 
 ## Testing
 
@@ -254,7 +335,7 @@ local/staging only):
 wp eval-file wp-content/plugins/advanced-header-footer-code-manager/tests/verify.php
 ```
 
-55 checks: placement of both locations in real HTTP responses, page/post/CPT
+70 checks: placement of both locations in real HTTP responses, page/post/CPT
 scoping, global + page combination and order, every enable/disable switch,
 byte-exact storage and output of tricky code (backslashes, quotes, `<\/script>`,
 JSON-LD, Unicode, CRLF), duplicate-output protection, feed/REST/AJAX/builder

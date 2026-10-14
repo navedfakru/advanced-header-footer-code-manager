@@ -40,12 +40,15 @@
 		this.el = el;
 		this.$el = $( el );
 		this.textarea = el.querySelector( 'textarea' );
-		this.radios = el.querySelectorAll( '[data-ahfcm-language]' );
+		// Fields live inside a slot card (HTML/CSS/JS tabs); full screen and
+		// the toolbar belong to the card.
+		this.slotEl = el.closest( '[data-ahfcm-slot]' );
+		this.fsEl = this.slotEl || el;
 		this.cursor = el.querySelector( '[data-ahfcm-cursor]' );
 		this.status = el.querySelector( '[data-ahfcm-status]' );
 		this.hint = el.querySelector( '[data-ahfcm-hint]' );
 		this.badge = el.querySelector( '[data-ahfcm-badge]' );
-		this.label = el.querySelector( '.ahfcm-field__title' );
+		this.label = el.querySelector( 'label' ) || ( this.slotEl && this.slotEl.querySelector( '.ahfcm-field__title' ) );
 		this.cm = null;
 		this.initial = this.textarea.value;
 		this.lintSummary = '';
@@ -56,8 +59,7 @@
 	}
 
 	Field.prototype.language = function () {
-		var checked = this.el.querySelector( '[data-ahfcm-language]:checked' );
-		return checked ? checked.value : 'html';
+		return this.el.getAttribute( 'data-language' ) || 'html';
 	};
 
 	Field.prototype.value = function () {
@@ -71,11 +73,6 @@
 		var self = this;
 		var language = this.language();
 		var editors = config.editors;
-
-		this.el.setAttribute( 'data-language', language );
-		if ( this.badge ) {
-			this.badge.textContent = ( i18n.languages && i18n.languages[ language ] ) || language.toUpperCase();
-		}
 
 		if ( ! editors || ! editors[ language ] || ! wp || ! wp.codeEditor ) {
 			this.el.classList.add( 'is-plain' );
@@ -97,7 +94,7 @@
 				self.toggleFullscreen();
 			},
 			Esc: function ( cm ) {
-				if ( self.el.classList.contains( 'is-fullscreen' ) ) {
+				if ( self.fsEl.classList.contains( 'is-fullscreen' ) ) {
 					self.toggleFullscreen( false );
 				} else {
 					// Let core's tabbing helper see Escape (next Tab leaves the editor).
@@ -174,6 +171,22 @@
 	 * Refreshes CodeMirror when it becomes visible (collapsed meta boxes,
 	 * inactive tabs and the block editor's meta box area start hidden).
 	 */
+	/**
+	 * Fully removes the editor and every listener this Field added.
+	 */
+	Field.prototype.destroy = function () {
+		this.unmount();
+		this.$el.off();
+		$( this.textarea ).off( 'input' );
+		if ( this.resizeObserver ) {
+			this.resizeObserver.disconnect();
+			this.resizeObserver = null;
+		}
+		clearTimeout( this.diagTimer );
+		clearTimeout( this.colorTimer );
+		this.destroyed = true;
+	};
+
 	Field.prototype.observeVisibility = function () {
 		var self = this;
 		if ( ! window.IntersectionObserver ) {
@@ -192,33 +205,6 @@
 	Field.prototype.bind = function () {
 		var self = this;
 
-		this.$el.on( 'change', '[data-ahfcm-language]', function () {
-			var position = self.cm ? self.cm.getCursor() : null;
-			self.unmount();
-			self.mount();
-			if ( self.cm && position ) {
-				self.cm.setCursor( position );
-			}
-			self.updateDiagnostics();
-			speak( sprintf( i18n.languageSwitched, ( i18n.languages && i18n.languages[ self.language() ] ) || self.language() ) );
-			markDirty();
-		} );
-
-		this.$el.on( 'change', '[data-ahfcm-enabled]', function () {
-			self.el.classList.toggle( 'is-disabled', ! this.checked );
-			markDirty();
-		} );
-
-		this.$el.on( 'click', '[data-ahfcm-format]', function ( e ) {
-			e.preventDefault();
-			self.format();
-		} );
-
-		this.$el.on( 'click', '[data-ahfcm-fullscreen]', function ( e ) {
-			e.preventDefault();
-			self.toggleFullscreen();
-		} );
-
 		if ( ! this.cm ) {
 			$( this.textarea ).on( 'input', function () {
 				self.onChange();
@@ -228,8 +214,8 @@
 		// Drag-to-resize: the wrapper uses CSS resize; mirror its height into CodeMirror.
 		var resizable = this.el.querySelector( '[data-ahfcm-resize]' );
 		if ( resizable && window.ResizeObserver ) {
-			new ResizeObserver( function () {
-				if ( self.cm && ! self.el.classList.contains( 'is-fullscreen' ) && resizable.style.height ) {
+			this.resizeObserver = new ResizeObserver( function () {
+				if ( self.cm && ! self.fsEl.classList.contains( 'is-fullscreen' ) && resizable.style.height ) {
 					self.cm.setSize( null, resizable.clientHeight );
 				}
 			} ).observe( resizable );
@@ -290,7 +276,7 @@
 			return;
 		}
 		this.clearSwatches();
-		if ( this.language() === 'javascript' ) {
+		if ( this.language() === 'js' || this.language() === 'javascript' ) {
 			return;
 		}
 
@@ -590,6 +576,9 @@
 	Field.prototype.onChange = function () {
 		var self = this;
 		this.scheduleColorize();
+		if ( this.slot ) {
+			this.slot.updateDots();
+		}
 		markDirty();
 		clearTimeout( this.diagTimer );
 		this.diagTimer = setTimeout( function () {
@@ -651,9 +640,9 @@
 	};
 
 	Field.prototype.toggleFullscreen = function ( force ) {
-		var on = typeof force === 'boolean' ? force : ! this.el.classList.contains( 'is-fullscreen' );
-		var button = this.el.querySelector( '[data-ahfcm-fullscreen]' );
-		this.el.classList.toggle( 'is-fullscreen', on );
+		var on = typeof force === 'boolean' ? force : ! this.fsEl.classList.contains( 'is-fullscreen' );
+		var button = this.fsEl.querySelector( '[data-ahfcm-fullscreen]' );
+		this.fsEl.classList.toggle( 'is-fullscreen', on );
 		document.documentElement.classList.toggle( 'ahfcm-has-fullscreen', on );
 		if ( button ) {
 			// Icon-only button: the CSS swaps the expand/collapse icon via aria-pressed.
@@ -677,6 +666,126 @@
 	Field.prototype.markClean = function () {
 		this.initial = this.value();
 	};
+
+	/**
+	 * A code slot card: HTML / CSS / JS tabs over three Fields, plus the
+	 * card's Enabled switch, Format and Full screen buttons (acting on the
+	 * visible tab). All three parts are saved together.
+	 *
+	 * @param {HTMLElement} el
+	 */
+	function Slot( el ) {
+		var self = this;
+		this.el = el;
+		this.$el = $( el );
+		this.fields = [];
+		$( el ).find( '[data-ahfcm-field]' ).each( function () {
+			if ( this.ahfcmField ) {
+				this.ahfcmField.slot = self;
+				self.fields.push( this.ahfcmField );
+			}
+		} );
+
+		this.$el.on( 'click.ahfcmslot', '[data-ahfcm-part-tab]', function ( e ) {
+			e.preventDefault();
+			self.show( this.getAttribute( 'data-ahfcm-part-tab' ), true );
+		} );
+		this.$el.on( 'keydown.ahfcmslot', '[data-ahfcm-part-tab]', function ( e ) {
+			var tabs = self.tabs();
+			var i = tabs.indexOf( this );
+			var next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null;
+			if ( next !== null ) {
+				e.preventDefault();
+				var tab = tabs[ ( next + tabs.length ) % tabs.length ];
+				tab.focus();
+				self.show( tab.getAttribute( 'data-ahfcm-part-tab' ) );
+			}
+		} );
+		this.$el.on( 'change.ahfcmslot', '[data-ahfcm-enabled]', function () {
+			self.el.classList.toggle( 'is-disabled', ! this.checked );
+			markDirty();
+		} );
+		this.$el.on( 'click.ahfcmslot', '[data-ahfcm-format]', function ( e ) {
+			e.preventDefault();
+			var field = self.active();
+			if ( field ) {
+				field.format();
+			}
+		} );
+		this.$el.on( 'click.ahfcmslot', '[data-ahfcm-fullscreen]', function ( e ) {
+			e.preventDefault();
+			var field = self.active();
+			if ( field ) {
+				field.toggleFullscreen();
+			}
+		} );
+
+		this.show( el.getAttribute( 'data-active' ) || 'html' );
+		this.updateDots();
+	}
+
+	Slot.prototype.tabs = function () {
+		return Array.prototype.slice.call( this.el.querySelectorAll( '[data-ahfcm-part-tab]' ) );
+	};
+
+	Slot.prototype.active = function () {
+		var name = this.el.getAttribute( 'data-active' ) || 'html';
+		return this.fields.filter( function ( f ) {
+			return f.language() === name;
+		} )[ 0 ] || this.fields[ 0 ];
+	};
+
+	Slot.prototype.show = function ( name, focus ) {
+		var fullscreen = this.el.classList.contains( 'is-fullscreen' );
+		this.el.setAttribute( 'data-active', name );
+		this.tabs().forEach( function ( tab ) {
+			var on = tab.getAttribute( 'data-ahfcm-part-tab' ) === name;
+			tab.classList.toggle( 'is-active', on );
+			tab.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+			tab.tabIndex = on ? 0 : -1;
+		} );
+		this.fields.forEach( function ( field ) {
+			var on = field.language() === name;
+			field.el.hidden = ! on;
+			if ( on && field.cm ) {
+				if ( fullscreen ) {
+					field.cm.setSize( null, '100%' );
+				}
+				field.cm.refresh();
+				if ( focus ) {
+					field.cm.focus();
+				}
+			}
+		} );
+	};
+
+	/** Dot on each tab that has code. */
+	Slot.prototype.updateDots = function () {
+		var self = this;
+		this.fields.forEach( function ( field ) {
+			var dot = self.el.querySelector( '[data-ahfcm-part-tab="' + field.language() + '"] .ahfcm-part-dot' );
+			if ( dot ) {
+				dot.classList.toggle( 'has-code', '' !== field.value().trim() );
+			}
+		} );
+	};
+
+	Slot.prototype.destroy = function () {
+		this.$el.off( '.ahfcmslot' );
+		this.fields.forEach( function ( field ) {
+			field.slot = null;
+		} );
+		this.el.ahfcmSlot = null;
+	};
+
+	/** Creates Slot controllers for cards inside root (after their Fields). */
+	function mountSlots( root ) {
+		$( root ).find( '[data-ahfcm-slot]' ).addBack( '[data-ahfcm-slot]' ).each( function () {
+			if ( ! this.ahfcmSlot ) {
+				this.ahfcmSlot = new Slot( this );
+			}
+		} );
+	}
 
 	/**
 	 * Focuses the next/previous focusable element outside an editor.
@@ -820,8 +929,66 @@
 				fields.push( this.ahfcmField );
 			}
 		} );
+		mountSlots( document.body );
 		initTabs();
 		trackDirtyInputs();
 		watchSaves();
 	} );
+
+	/**
+	 * Public API for dynamically rendered editors (Breakdance builder panel).
+	 */
+	window.AHFCMEditor = {
+		/**
+		 * Creates editors for every field inside root.
+		 *
+		 * @param {HTMLElement} root
+		 * @return {Field[]}
+		 */
+		mount: function ( root ) {
+			var created = [];
+			$( root ).find( '[data-ahfcm-field]' ).each( function () {
+				if ( ! this.ahfcmField ) {
+					this.ahfcmField = new Field( this );
+					created.push( this.ahfcmField );
+					fields.push( this.ahfcmField );
+				}
+			} );
+			mountSlots( root );
+			return created;
+		},
+		/**
+		 * Destroys editors created by mount(); textareas keep their values.
+		 *
+		 * @param {Field[]} list
+		 */
+		unmount: function ( list ) {
+			( list || [] ).forEach( function ( field ) {
+				if ( field.slot ) {
+					field.slot.destroy();
+				}
+				field.destroy();
+				field.el.ahfcmField = null;
+				fields = fields.filter( function ( f ) {
+					return f !== field;
+				} );
+			} );
+		},
+		/** @return {boolean} Whether any of the fields changed since mount/markClean. */
+		isDirty: function ( list ) {
+			return ( list || [] ).some( function ( field ) {
+				return field.isDirty();
+			} );
+		},
+		markClean: function ( list ) {
+			( list || [] ).forEach( function ( field ) {
+				field.markClean();
+			} );
+			// Clears the page-level unsaved flag used by the beforeunload guard.
+			formDirty = false;
+		},
+		closePicker: function () {
+			Picker.close();
+		}
+	};
 }( jQuery ) );

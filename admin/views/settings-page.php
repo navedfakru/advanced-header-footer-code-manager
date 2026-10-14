@@ -64,10 +64,11 @@ $ahfcm_live = $settings['enabled'] && Settings::has_code( $settings );
 
 	<form method="post" action="options.php" data-ahfcm-form>
 		<?php settings_fields( Settings::GROUP ); ?>
+		<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[_schema]" value="<?php echo esc_attr( Settings::SCHEMA_VERSION ); ?>">
 
 		<section class="ahfcm-panel" data-ahfcm-panel="code" role="tabpanel">
 			<div class="ahfcm-card ahfcm-master">
-				<label class="ahfcm-switch ahfcm-switch--lg">
+				<label class="ahfcm-switch ahfcm-switch--lg ahfcm-master-toggle">
 					<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[enabled]" value="0">
 					<input type="checkbox" role="switch" name="<?php echo esc_attr( $ahfcm_opt ); ?>[enabled]" value="1" <?php checked( $settings['enabled'] ); ?>>
 					<span class="ahfcm-switch__track" aria-hidden="true"></span>
@@ -82,6 +83,7 @@ $ahfcm_live = $settings['enabled'] && Settings::has_code( $settings );
 				</p>
 			</div>
 
+			<p class="ahfcm-master-off" role="status"><?php esc_html_e( 'Global code is switched OFF, so none of the code below is loaded on any page. Turn on "Global code" above to load it.', 'advanced-header-footer-code-manager' ); ?></p>
 			<div class="ahfcm-grid">
 				<?php
 				foreach ( Settings::SLOTS as $ahfcm_slot ) {
@@ -143,14 +145,35 @@ $ahfcm_live = $settings['enabled'] && Settings::has_code( $settings );
 					</div>
 				</div>
 
+				<?php $ahfcm_bd_types = \AHFCM\Breakdance::template_types(); ?>
+				<?php if ( $ahfcm_bd_types ) : ?>
+					<div class="ahfcm-row">
+						<div class="ahfcm-row__label">
+							<span><?php esc_html_e( 'Breakdance templates', 'advanced-header-footer-code-manager' ); ?></span>
+							<p><?php esc_html_e( 'Give these their own code, edited from the builder. It runs on every page that uses the template, header, footer or popup.', 'advanced-header-footer-code-manager' ); ?></p>
+						</div>
+						<div class="ahfcm-row__control">
+							<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[breakdance_types][]" value="">
+							<div class="ahfcm-checks">
+								<?php foreach ( $ahfcm_bd_types as $ahfcm_bd_type => $ahfcm_bd_label ) : ?>
+									<label class="ahfcm-check">
+										<input type="checkbox" name="<?php echo esc_attr( $ahfcm_opt ); ?>[breakdance_types][]" value="<?php echo esc_attr( $ahfcm_bd_type ); ?>" <?php checked( null === $settings['breakdance_types'] || in_array( $ahfcm_bd_type, $settings['breakdance_types'], true ) ); ?>>
+										<span><?php echo esc_html( $ahfcm_bd_label ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					</div>
+				<?php endif; ?>
+
 				<div class="ahfcm-row">
 					<div class="ahfcm-row__label">
 						<span><?php esc_html_e( 'Hook priority', 'advanced-header-footer-code-manager' ); ?></span>
-						<p><?php esc_html_e( 'Lower runs earlier. Defaults: 10 for head (after styles), 100 for footer (after footer scripts, so jQuery is available).', 'advanced-header-footer-code-manager' ); ?></p>
+						<p><?php esc_html_e( 'Lower runs earlier. Default 1000001 puts your code at the very end of <head> and <body>, after theme and Breakdance CSS/JS, so your styles win and scripts can use loaded libraries. Use a low number (e.g. 1) for tags that must load first.', 'advanced-header-footer-code-manager' ); ?></p>
 					</div>
 					<div class="ahfcm-row__control ahfcm-inline-fields">
-						<label><code>wp_head</code> <input type="number" class="small-text" min="-9999" max="9999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][head][priority]" value="<?php echo esc_attr( $settings['slots']['head']['priority'] ); ?>"></label>
-						<label><code>wp_footer</code> <input type="number" class="small-text" min="-9999" max="9999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][footer][priority]" value="<?php echo esc_attr( $settings['slots']['footer']['priority'] ); ?>"></label>
+						<label><code>wp_head</code> <input type="number" class="regular-text ahfcm-prio" min="-99999999" max="99999999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][head][priority]" value="<?php echo esc_attr( $settings['slots']['head']['priority'] ); ?>"></label>
+						<label><code>wp_footer</code> <input type="number" class="regular-text ahfcm-prio" min="-99999999" max="99999999" name="<?php echo esc_attr( $ahfcm_opt ); ?>[slots][footer][priority]" value="<?php echo esc_attr( $settings['slots']['footer']['priority'] ); ?>"></label>
 					</div>
 				</div>
 
@@ -182,6 +205,90 @@ $ahfcm_live = $settings['enabled'] && Settings::has_code( $settings );
 					</div>
 				<?php endforeach; ?>
 			</div>
+
+			<?php
+			$ahfcm_roles = \AHFCM\Breakdance::eligible_roles();
+			$ahfcm_users = \AHFCM\Breakdance::eligible_users();
+			?>
+				<div class="ahfcm-card ahfcm-settings">
+					<h2 class="ahfcm-card__title"><?php esc_html_e( 'Toolbar buttons', 'advanced-header-footer-code-manager' ); ?></h2>
+
+					<div class="ahfcm-row">
+						<div class="ahfcm-row__label">
+							<span><?php esc_html_e( 'Show the button in the WordPress editor', 'advanced-header-footer-code-manager' ); ?></span>
+							<p><?php esc_html_e( 'A code icon in the block editor top bar (next to "Edit in Breakdance"). It jumps to this page\'s Header & Body Code Embed box.', 'advanced-header-footer-code-manager' ); ?></p>
+						</div>
+						<div class="ahfcm-row__control">
+							<label class="ahfcm-switch">
+								<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[editor_button]" value="0">
+								<input type="checkbox" role="switch" aria-label="<?php esc_attr_e( 'Show the button in the WordPress editor', 'advanced-header-footer-code-manager' ); ?>" name="<?php echo esc_attr( $ahfcm_opt ); ?>[editor_button]" value="1" data-ahfcm-button-toggle <?php checked( $settings['editor_button'] ); ?>>
+								<span class="ahfcm-switch__track" aria-hidden="true"></span>
+							</label>
+						</div>
+					</div>
+
+					<?php if ( defined( '__BREAKDANCE_VERSION' ) ) : ?>
+					<div class="ahfcm-row">
+						<div class="ahfcm-row__label">
+							<span><?php esc_html_e( 'Show the button in the builder', 'advanced-header-footer-code-manager' ); ?></span>
+							<p><?php esc_html_e( 'The code icon next to the properties button in the Breakdance top bar. Turning it off only hides the button — code keeps running and can still be edited here and in the WordPress editor.', 'advanced-header-footer-code-manager' ); ?></p>
+						</div>
+						<div class="ahfcm-row__control">
+							<label class="ahfcm-switch">
+								<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button]" value="0">
+								<input type="checkbox" role="switch" aria-label="<?php esc_attr_e( 'Show the button in the builder', 'advanced-header-footer-code-manager' ); ?>" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button]" value="1" data-ahfcm-button-toggle <?php checked( $settings['builder_button'] ); ?>>
+								<span class="ahfcm-switch__track" aria-hidden="true"></span>
+							</label>
+						</div>
+					</div>
+
+					<?php endif; ?>
+
+					<div class="ahfcm-row ahfcm-builder-cond">
+						<div class="ahfcm-row__label">
+							<span><?php esc_html_e( 'Show for these roles', 'advanced-header-footer-code-manager' ); ?></span>
+							<p><?php esc_html_e( 'Applies to both buttons. Only roles allowed to add raw code are listed; other roles never see them.', 'advanced-header-footer-code-manager' ); ?></p>
+						</div>
+						<div class="ahfcm-row__control">
+							<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button_roles][]" value="">
+							<div class="ahfcm-checks">
+								<?php foreach ( $ahfcm_roles as $ahfcm_role => $ahfcm_role_name ) : ?>
+									<label class="ahfcm-check">
+										<input type="checkbox" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button_roles][]" value="<?php echo esc_attr( $ahfcm_role ); ?>" <?php checked( null === $settings['builder_button_roles'] || in_array( $ahfcm_role, $settings['builder_button_roles'], true ) ); ?>>
+										<span><?php echo esc_html( $ahfcm_role_name ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					</div>
+
+					<div class="ahfcm-row ahfcm-builder-cond">
+						<div class="ahfcm-row__label">
+							<span><?php esc_html_e( 'Hide for these users', 'advanced-header-footer-code-manager' ); ?></span>
+							<p><?php esc_html_e( 'Ticked users never see either button, whatever their role.', 'advanced-header-footer-code-manager' ); ?></p>
+						</div>
+						<div class="ahfcm-row__control">
+							<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button_hide_users][]" value="">
+							<?php if ( $ahfcm_users ) : ?>
+								<div class="ahfcm-checks">
+									<?php foreach ( $ahfcm_users as $ahfcm_user ) : ?>
+										<label class="ahfcm-check">
+											<input type="checkbox" name="<?php echo esc_attr( $ahfcm_opt ); ?>[builder_button_hide_users][]" value="<?php echo esc_attr( $ahfcm_user->ID ); ?>" <?php checked( in_array( (int) $ahfcm_user->ID, $settings['builder_button_hide_users'], true ) ); ?>>
+											<span>
+												<?php echo esc_html( $ahfcm_user->display_name ); ?>
+												<?php if ( get_current_user_id() === (int) $ahfcm_user->ID ) : ?>
+													<em class="ahfcm-muted"><?php esc_html_e( '(you)', 'advanced-header-footer-code-manager' ); ?></em>
+												<?php endif; ?>
+											</span>
+										</label>
+									<?php endforeach; ?>
+								</div>
+							<?php else : ?>
+								<span class="ahfcm-muted"><?php esc_html_e( 'No users can add raw code.', 'advanced-header-footer-code-manager' ); ?></span>
+							<?php endif; ?>
+						</div>
+					</div>
+				</div>
 
 			<div class="ahfcm-card ahfcm-settings ahfcm-card--danger">
 				<h2 class="ahfcm-card__title"><?php esc_html_e( 'Uninstall', 'advanced-header-footer-code-manager' ); ?></h2>
@@ -290,7 +397,7 @@ $ahfcm_live = $settings['enabled'] && Settings::has_code( $settings );
 							$ahfcm_user  = get_userdata( (int) $ahfcm_entry['user'] );
 							$ahfcm_bytes = 0;
 							foreach ( Settings::SLOTS as $ahfcm_slot ) {
-								$ahfcm_bytes += isset( $ahfcm_entry['value']['slots'][ $ahfcm_slot ]['code'] ) ? strlen( $ahfcm_entry['value']['slots'][ $ahfcm_slot ]['code'] ) : 0;
+								$ahfcm_bytes += isset( $ahfcm_entry['value']['slots'][ $ahfcm_slot ] ) && is_array( $ahfcm_entry['value']['slots'][ $ahfcm_slot ] ) ? Settings::slot_size( $ahfcm_entry['value']['slots'][ $ahfcm_slot ] ) : 0;
 							}
 							?>
 							<tr>

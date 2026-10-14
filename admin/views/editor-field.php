@@ -1,14 +1,15 @@
 <?php
 /**
- * One code editor card.
+ * One code slot card: HTML, CSS and JS editors side by side in tabs.
+ * All three parts are saved and output together.
  *
- * @var string $id         Element ID.
+ * @var string $id         Element ID prefix.
  * @var string $name_base  Form name prefix.
  * @var string $slot       Slot key.
- * @var array  $data       Slot data.
+ * @var array  $data       Slot data (html, css, js, enabled).
  * @var string $scope_note Scope reminder.
  * @var array  $labels     Slot labels.
- * @var array  $languages  Language labels.
+ * @var array  $languages  Part => label.
  *
  * @package AHFCM
  */
@@ -16,8 +17,22 @@
 defined( 'ABSPATH' ) || exit;
 
 $ahfcm_slot_info = $labels[ $slot ];
+
+// Open the first part that has code (HTML when all are empty).
+$ahfcm_active = 'html';
+foreach ( array( 'html', 'css', 'js' ) as $ahfcm_part ) {
+	if ( '' !== trim( $data[ $ahfcm_part ] ) ) {
+		$ahfcm_active = $ahfcm_part;
+		break;
+	}
+}
+$ahfcm_part_help = array(
+	'html' => __( 'HTML is output exactly as written: tags, <script src>, <link>, <meta>, JSON-LD…', 'advanced-header-footer-code-manager' ),
+	'css'  => __( 'Plain CSS, wrapped in <style> for you. Printed before the HTML.', 'advanced-header-footer-code-manager' ),
+	'js'   => __( 'Plain JavaScript, wrapped in <script> for you. Printed after the HTML.', 'advanced-header-footer-code-manager' ),
+);
 ?>
-<div class="ahfcm-card ahfcm-field<?php echo $data['enabled'] ? '' : ' is-disabled'; ?>" data-ahfcm-field data-language="<?php echo esc_attr( $data['language'] ); ?>">
+<div class="ahfcm-card ahfcm-slot<?php echo $data['enabled'] ? '' : ' is-disabled'; ?>" data-ahfcm-slot data-active="<?php echo esc_attr( $ahfcm_active ); ?>">
 	<div class="ahfcm-field__header">
 		<div class="ahfcm-field__heading">
 			<span class="ahfcm-field__icon ahfcm-field__icon--<?php echo esc_attr( $slot ); ?>" aria-hidden="true">
@@ -28,7 +43,7 @@ $ahfcm_slot_info = $labels[ $slot ];
 				<?php endif; ?>
 			</span>
 			<div>
-				<label class="ahfcm-field__title" for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $ahfcm_slot_info['label'] ); ?></label>
+				<span class="ahfcm-field__title" id="<?php echo esc_attr( $id ); ?>-title"><?php echo esc_html( $ahfcm_slot_info['label'] ); ?></span>
 				<div class="ahfcm-field__meta">
 					<code class="ahfcm-chip"><?php echo esc_html( $ahfcm_slot_info['where'] ); ?></code>
 					<span><?php echo esc_html( $scope_note ); ?></span>
@@ -45,12 +60,15 @@ $ahfcm_slot_info = $labels[ $slot ];
 	</div>
 
 	<div class="ahfcm-field__toolbar">
-		<div class="ahfcm-seg" role="radiogroup" aria-label="<?php esc_attr_e( 'Code language', 'advanced-header-footer-code-manager' ); ?>">
-			<?php foreach ( $languages as $ahfcm_lang => $ahfcm_lang_label ) : ?>
-				<label class="ahfcm-seg__item">
-					<input type="radio" name="<?php echo esc_attr( $name_base ); ?>[language]" value="<?php echo esc_attr( $ahfcm_lang ); ?>" data-ahfcm-language <?php checked( $data['language'], $ahfcm_lang ); ?>>
-					<span><?php echo esc_html( $ahfcm_lang_label ); ?></span>
-				</label>
+		<div class="ahfcm-seg ahfcm-parts" role="tablist" aria-labelledby="<?php echo esc_attr( $id ); ?>-title">
+			<?php foreach ( $languages as $ahfcm_part => $ahfcm_label ) : ?>
+				<button type="button" role="tab" class="ahfcm-seg__item ahfcm-part-tab<?php echo $ahfcm_part === $ahfcm_active ? ' is-active' : ''; ?>"
+					id="<?php echo esc_attr( $id . '-' . $ahfcm_part ); ?>-tab"
+					aria-controls="<?php echo esc_attr( $id . '-' . $ahfcm_part ); ?>-panel"
+					aria-selected="<?php echo $ahfcm_part === $ahfcm_active ? 'true' : 'false'; ?>"
+					data-ahfcm-part-tab="<?php echo esc_attr( $ahfcm_part ); ?>">
+					<span><?php echo esc_html( $ahfcm_label ); ?><i class="ahfcm-part-dot<?php echo '' !== trim( $data[ $ahfcm_part ] ) ? ' has-code' : ''; ?>" aria-hidden="true"></i></span>
+				</button>
 			<?php endforeach; ?>
 		</div>
 
@@ -66,23 +84,32 @@ $ahfcm_slot_info = $labels[ $slot ];
 		</div>
 	</div>
 
-	<div class="ahfcm-field__editor" data-ahfcm-resize>
-		<textarea
-			id="<?php echo esc_attr( $id ); ?>"
-			name="<?php echo esc_attr( $name_base ); ?>[code]"
-			class="ahfcm-textarea"
-			rows="12"
-			spellcheck="false"
-			autocomplete="off"
-			aria-describedby="<?php echo esc_attr( $id ); ?>-desc <?php echo esc_attr( $id ); ?>-status"
-		><?php echo esc_textarea( $data['code'] ); ?></textarea>
-	</div>
+	<?php foreach ( $languages as $ahfcm_part => $ahfcm_label ) : ?>
+		<?php $ahfcm_pid = $id . '-' . $ahfcm_part; ?>
+		<div class="ahfcm-field" data-ahfcm-field data-language="<?php echo esc_attr( $ahfcm_part ); ?>"
+			id="<?php echo esc_attr( $ahfcm_pid ); ?>-panel" role="tabpanel" aria-labelledby="<?php echo esc_attr( $ahfcm_pid ); ?>-tab"
+			<?php echo $ahfcm_part === $ahfcm_active ? '' : 'hidden'; ?>>
+			<div class="ahfcm-field__editor" data-ahfcm-resize>
+				<label class="screen-reader-text ahfcm-sr" for="<?php echo esc_attr( $ahfcm_pid ); ?>"><?php echo esc_html( $ahfcm_slot_info['label'] . ' — ' . $ahfcm_label ); ?></label>
+				<textarea
+					id="<?php echo esc_attr( $ahfcm_pid ); ?>"
+					name="<?php echo esc_attr( $name_base . '[' . $ahfcm_part . ']' ); ?>"
+					class="ahfcm-textarea"
+					rows="12"
+					spellcheck="false"
+					autocomplete="off"
+					aria-describedby="<?php echo esc_attr( $ahfcm_pid ); ?>-help <?php echo esc_attr( $ahfcm_pid ); ?>-status"
+				><?php echo esc_textarea( $data[ $ahfcm_part ] ); ?></textarea>
+			</div>
+			<div class="ahfcm-statusbar">
+				<span class="ahfcm-statusbar__lang" data-ahfcm-badge><?php echo esc_html( $ahfcm_label ); ?></span>
+				<span class="ahfcm-statusbar__status" id="<?php echo esc_attr( $ahfcm_pid ); ?>-status" data-ahfcm-status aria-live="polite"></span>
+				<span class="ahfcm-statusbar__cursor" data-ahfcm-cursor></span>
+			</div>
+			<p class="ahfcm-field__hint" data-ahfcm-hint></p>
+			<p class="ahfcm-field__desc" id="<?php echo esc_attr( $ahfcm_pid ); ?>-help"><?php echo esc_html( $ahfcm_part_help[ $ahfcm_part ] ); ?></p>
+		</div>
+	<?php endforeach; ?>
 
-	<div class="ahfcm-statusbar">
-		<span class="ahfcm-statusbar__lang" data-ahfcm-badge><?php echo esc_html( $languages[ $data['language'] ] ); ?></span>
-		<span class="ahfcm-statusbar__status" id="<?php echo esc_attr( $id ); ?>-status" data-ahfcm-status aria-live="polite"></span>
-		<span class="ahfcm-statusbar__cursor" data-ahfcm-cursor></span>
-	</div>
-	<p class="ahfcm-field__hint" data-ahfcm-hint></p>
-	<p class="ahfcm-field__desc" id="<?php echo esc_attr( $id ); ?>-desc"><?php echo esc_html( $ahfcm_slot_info['description'] ); ?></p>
+	<p class="ahfcm-field__desc ahfcm-slot__desc"><?php echo esc_html( $ahfcm_slot_info['description'] ); ?></p>
 </div>

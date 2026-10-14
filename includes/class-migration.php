@@ -122,7 +122,7 @@ final class Migration {
 					$row['notes'][] = __( 'Post type is not enabled for per-post code; the imported code will not run until it is.', 'advanced-header-footer-code-manager' );
 				}
 
-				$current = $data['slots'][ $slot ]['code'];
+				$current = $data['slots'][ $slot ]['html'];
 
 				if ( $current === $legacy ) {
 					if ( $args['enable'] && ! $data['slots'][ $slot ]['enabled'] ) {
@@ -136,8 +136,7 @@ final class Migration {
 					$row['status'] = 'skipped_conflict';
 				} else {
 					$row['status']                      = 'import';
-					$data['slots'][ $slot ]['code']     = $legacy;
-					$data['slots'][ $slot ]['language'] = 'html';
+					$data['slots'][ $slot ]['html'] = $legacy;
 					$data['slots'][ $slot ]['enabled']  = (bool) $args['enable'];
 					$changed                            = true;
 				}
@@ -153,7 +152,7 @@ final class Migration {
 					if ( $row['post_id'] !== $post_id || ! in_array( $row['status'], array( 'import', 'enable' ), true ) ) {
 						continue;
 					}
-					$ok            = Settings::normalize_code( (string) get_post_meta( $post_id, $row['field'], true ) ) === $saved['slots'][ $row['target'] ]['code'];
+					$ok            = Settings::normalize_code( (string) get_post_meta( $post_id, $row['field'], true ) ) === $saved['slots'][ $row['target'] ]['html'];
 					$row['status'] = $ok ? ( 'import' === $row['status'] ? 'imported' : 'enabled' ) : 'failed';
 				}
 				unset( $row );

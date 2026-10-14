@@ -7,14 +7,23 @@
  *     version                  int    Schema version.
  *     enabled                  bool   Master switch for global code.
  *     slots[head|footer]
- *         code                 string Raw code, stored exactly as typed.
+ *         html                 string Raw HTML, stored exactly as typed.
+ *         css                  string Raw CSS (output inside <style>).
+ *         js                   string Raw JavaScript (output inside <script>).
  *         enabled              bool
- *         language             string html|css|javascript
  *         priority             int    Hook priority.
+ *
+ * Schema 1–2 stored one `code` string plus a `language`; normalize_slot()
+ * converts that shape on read, so old data keeps working.
  *     editor_theme             string dark|light
  *     editor_height            int    Pixels.
  *     post_types               array|null  Post types with the per-post box; null = all public.
+ *     breakdance_types         array|null  Breakdance template types with their own code; null = all.
  *     run_in_builder_preview   bool
+ *     builder_button           bool   Show the button in the Breakdance builder.
+ *     editor_button            bool   Show the button in the block editor toolbar.
+ *     builder_button_roles     array|null  Roles that see it; null = every role allowed to edit code.
+ *     builder_button_hide_users int[] Users who never see it.
  *     output_markers           bool   Wrap output in HTML comments.
  *     delete_data_on_uninstall bool
  *
@@ -36,11 +45,25 @@ final class Settings {
 	const OPTION         = 'ahfcm_global_settings';
 	const HISTORY_OPTION = 'ahfcm_global_history';
 	const GROUP          = 'ahfcm_settings';
-	const SCHEMA_VERSION = 1;
+	const SCHEMA_VERSION = 3;
+
+	/**
+	 * Default hook priority: right after page-builder assets.
+	 *
+	 * Breakdance prints its CSS/JS through a placeholder at priority 1000000
+	 * (BREAKDANCE_ASSETS_PRIORITY) in both wp_head and wp_footer, so code must
+	 * come later for CSS overrides to win and for scripts to see the builder's
+	 * libraries. Also a sensible "end of head / end of body" for other themes.
+	 */
+	const DEFAULT_PRIORITY = 1000001;
+
+	/** Allowed priority range. */
+	const MAX_PRIORITY = 99999999;
 	const HISTORY_LIMIT  = 5;
 
 	const SLOTS     = array( 'head', 'footer' );
-	const LANGUAGES = array( 'html', 'css', 'javascript' );
+	/** Code parts of a slot, in output order. */
+	const PARTS = array( 'css', 'html', 'js' );
 
 	/**
 	 * Request-level cache of the normalized option.
@@ -98,15 +121,16 @@ final class Settings {
 	 */
 	public static function slot_defaults( $slot ) {
 		$priorities = array(
-			'head'   => 10,
-			'footer' => 100,
+			'head'   => self::DEFAULT_PRIORITY,
+			'footer' => self::DEFAULT_PRIORITY,
 		);
 
 		return array(
-			'code'     => '',
+			'html'     => '',
+			'css'      => '',
+			'js'       => '',
 			'enabled'  => true,
-			'language' => 'html',
-			'priority' => isset( $priorities[ $slot ] ) ? $priorities[ $slot ] : 10,
+			'priority' => isset( $priorities[ $slot ] ) ? $priorities[ $slot ] : self::DEFAULT_PRIORITY,
 		);
 	}
 
@@ -128,7 +152,12 @@ final class Settings {
 			'editor_theme'             => 'dark',
 			'editor_height'            => 320,
 			'post_types'               => null,
+			'breakdance_types'         => null,
 			'run_in_builder_preview'   => false,
+			'builder_button'           => true,
+			'editor_button'            => true,
+			'builder_button_roles'     => null,
+			'builder_button_hide_users' => array(),
 			'output_markers'           => true,
 			'delete_data_on_uninstall' => false,
 		);
@@ -167,6 +196,22 @@ final class Settings {
 	 * @return array
 	 */
 	public static function sanitize( $input ) {
+		// A settings page opened before a data-format upgrade would post the
+		// old field layout and wipe code. Refuse such saves and keep what is
+		// stored. Only the options.php form carries `_schema`; programmatic
+		// update_option() calls are not affected.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- options.php already verified the nonce.
+		$is_form = isset( $_POST['option_page'] ) && self::GROUP === $_POST['option_page'];
+		if ( $is_form && ( ! is_array( $input ) || ! isset( $input['_schema'] ) || (int) $input['_schema'] !== self::SCHEMA_VERSION ) ) {
+			add_settings_error(
+				self::OPTION,
+				'ahfcm_stale_form',
+				__( 'Not saved: this page was opened before the plugin was updated. Reload the page and make your changes again.', 'advanced-header-footer-code-manager' )
+			);
+			$current = get_option( self::OPTION, array() );
+			return self::normalize( is_array( $current ) ? $current : array() );
+		}
+
 		return self::normalize( is_array( $input ) ? $input : array() );
 	}
 
@@ -195,12 +240,18 @@ final class Settings {
 		$height               = isset( $raw['editor_height'] ) ? absint( $raw['editor_height'] ) : $defaults['editor_height'];
 		$out['editor_height'] = max( 120, min( 2000, $height ) );
 
-		if ( isset( $raw['post_types'] ) && is_array( $raw['post_types'] ) ) {
-			$out['post_types'] = array_values( array_unique( array_filter( array_map( 'sanitize_key', $raw['post_types'] ) ) ) );
+		foreach ( array( 'post_types', 'breakdance_types', 'builder_button_roles' ) as $list ) {
+			if ( isset( $raw[ $list ] ) && is_array( $raw[ $list ] ) ) {
+				$out[ $list ] = array_values( array_unique( array_filter( array_map( 'sanitize_key', $raw[ $list ] ) ) ) );
+			}
 		}
 
 
-		foreach ( array( 'run_in_builder_preview', 'output_markers', 'delete_data_on_uninstall' ) as $flag ) {
+		$out['builder_button_hide_users'] = isset( $raw['builder_button_hide_users'] ) && is_array( $raw['builder_button_hide_users'] )
+			? array_values( array_unique( array_filter( array_map( 'absint', $raw['builder_button_hide_users'] ) ) ) )
+			: $defaults['builder_button_hide_users'];
+
+		foreach ( array( 'run_in_builder_preview', 'output_markers', 'delete_data_on_uninstall', 'builder_button', 'editor_button' ) as $flag ) {
 			$out[ $flag ] = self::to_bool( isset( $raw[ $flag ] ) ? $raw[ $flag ] : $defaults[ $flag ] );
 		}
 
@@ -216,15 +267,28 @@ final class Settings {
 	 * @return array
 	 */
 	public static function normalize_slot( array $raw, array $defaults, $with_priority = false ) {
-		$slot = array(
-			'code'     => isset( $raw['code'] ) && is_scalar( $raw['code'] ) ? self::normalize_code( (string) $raw['code'] ) : $defaults['code'],
-			'enabled'  => self::to_bool( isset( $raw['enabled'] ) ? $raw['enabled'] : $defaults['enabled'] ),
-			'language' => ( isset( $raw['language'] ) && in_array( $raw['language'], self::LANGUAGES, true ) ) ? $raw['language'] : $defaults['language'],
-		);
+		$slot = array();
+		foreach ( array( 'html', 'css', 'js' ) as $part ) {
+			$slot[ $part ] = isset( $raw[ $part ] ) && is_scalar( $raw[ $part ] ) ? self::normalize_code( (string) $raw[ $part ] ) : $defaults[ $part ];
+		}
+
+		// Legacy shape (one `code` + `language`): move the code to its part.
+		$has_parts = isset( $raw['html'] ) || isset( $raw['css'] ) || isset( $raw['js'] );
+		if ( ! $has_parts && isset( $raw['code'] ) && is_scalar( $raw['code'] ) ) {
+			$map           = array(
+				'css'        => 'css',
+				'javascript' => 'js',
+				'js'         => 'js',
+			);
+			$language      = isset( $raw['language'] ) && isset( $map[ $raw['language'] ] ) ? $map[ $raw['language'] ] : 'html';
+			$slot[ $language ] = self::normalize_code( (string) $raw['code'] );
+		}
+
+		$slot['enabled'] = self::to_bool( isset( $raw['enabled'] ) ? $raw['enabled'] : $defaults['enabled'] );
 
 		if ( $with_priority ) {
 			$priority         = isset( $raw['priority'] ) && is_numeric( $raw['priority'] ) ? (int) $raw['priority'] : $defaults['priority'];
-			$slot['priority'] = max( -9999, min( 9999, $priority ) );
+			$slot['priority'] = max( -self::MAX_PRIORITY, min( self::MAX_PRIORITY, $priority ) );
 		}
 
 		return $slot;
@@ -301,11 +365,37 @@ final class Settings {
 	 */
 	public static function has_code( array $settings ) {
 		foreach ( self::SLOTS as $slot ) {
-			if ( '' !== trim( $settings['slots'][ $slot ]['code'] ) ) {
+			if ( self::slot_has_code( $settings['slots'][ $slot ] ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Whether one slot has any non-blank code part.
+	 *
+	 * @param array $slot Normalized slot.
+	 * @return bool
+	 */
+	public static function slot_has_code( array $slot ) {
+		foreach ( self::PARTS as $part ) {
+			if ( isset( $slot[ $part ] ) && '' !== trim( $slot[ $part ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Total size of a slot's code in bytes.
+	 *
+	 * @param array $slot Slot (any schema).
+	 * @return int
+	 */
+	public static function slot_size( array $slot ) {
+		$slot = self::normalize_slot( $slot, self::slot_defaults( 'head' ) );
+		return strlen( $slot['html'] ) + strlen( $slot['css'] ) + strlen( $slot['js'] );
 	}
 
 	/**
@@ -315,6 +405,11 @@ final class Settings {
 	 * @return string
 	 */
 	private static function code_fingerprint( array $settings ) {
-		return md5( wp_json_encode( array( $settings['enabled'], $settings['slots'] ) ) );
+		$slots = array();
+		foreach ( $settings['slots'] as $key => $slot ) {
+			unset( $slot['priority'] );
+			$slots[ $key ] = $slot;
+		}
+		return md5( wp_json_encode( array( $settings['enabled'], $slots ) ) );
 	}
 }

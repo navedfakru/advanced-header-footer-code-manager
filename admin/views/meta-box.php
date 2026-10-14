@@ -18,6 +18,7 @@ use AHFCM\Security;
 use AHFCM\Settings;
 
 wp_nonce_field( Post_Meta::NONCE_PREFIX . $post->ID, Post_Meta::NONCE_FIELD );
+printf( '<input type="hidden" name="%s[_schema]" value="%d">', esc_attr( Post_Meta::FORM_FIELD ), (int) Settings::SCHEMA_VERSION );
 
 $ahfcm_type = strtolower( $type_label );
 /* translators: %s: post type name, e.g. "page". */
@@ -26,7 +27,7 @@ $ahfcm_field = Post_Meta::FORM_FIELD;
 ?>
 <div class="ahfcm-app ahfcm-metabox ahfcm-theme-<?php echo esc_attr( $global['editor_theme'] ); ?>" data-ahfcm-root data-ahfcm-context="post">
 	<div class="ahfcm-metabox__bar">
-		<label class="ahfcm-switch">
+		<label class="ahfcm-switch ahfcm-master-toggle">
 			<input type="hidden" name="<?php echo esc_attr( $ahfcm_field ); ?>[enabled]" value="0">
 			<input type="checkbox" role="switch" name="<?php echo esc_attr( $ahfcm_field ); ?>[enabled]" value="1" <?php checked( $data['enabled'] ); ?>>
 			<span class="ahfcm-switch__track" aria-hidden="true"></span>
@@ -58,6 +59,10 @@ $ahfcm_field = Post_Meta::FORM_FIELD;
 			?>
 		</span>
 	</div>
+
+	<p class="ahfcm-master-off" role="status">
+		<?php esc_html_e( 'Custom code is switched OFF for this item, so none of the code below is loaded. Turn on the first switch above to load it.', 'advanced-header-footer-code-manager' ); ?>
+	</p>
 
 	<div class="ahfcm-grid">
 		<?php

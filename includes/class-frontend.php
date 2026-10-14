@@ -5,7 +5,8 @@
  * Execution order inside each location:
  *
  *     1. Global code (Settings → Header & Footer Code)
- *     2. Code of the current singular post/page/CPT entry
+ *     2. Breakdance header, template(s), footer, popups and global blocks used by the request
+ *     3. Code of the current singular post/page/CPT entry
  *
  * Locations and default hook priorities (configurable per slot):
  *
@@ -89,34 +90,53 @@ final class Frontend {
 	 */
 	public function render( $slot, $post_id = null ) {
 		$global = Settings::get();
-		$post   = null;
 
+		// Documents whose code applies: Breakdance header/templates/footer/popups,
+		// then the page itself (most specific last). An explicit $post_id
+		// renders that document only.
 		if ( null === $post_id ) {
-			$post_id = $this->current_post_id();
+			$page    = $this->current_post_id();
+			$layout  = Breakdance::active_document_ids();
+			$blocks  = Breakdance::global_block_ids( array_merge( $layout, array( $page ) ), $slot );
+			$popups  = Breakdance::referenced_popup_ids( array_merge( $layout, $blocks, array( $page ) ), $slot );
+			$doc_ids = array_merge( $layout, $popups, $blocks, array( $page ) );
+		} else {
+			$doc_ids = array( (int) $post_id );
 		}
-		if ( $post_id ) {
-			$post = Post_Meta::get( $post_id );
+
+		$supported = Post_Meta::supported_post_types();
+		$docs      = array();
+		foreach ( array_unique( array_filter( array_map( 'intval', $doc_ids ) ) ) as $doc_id ) {
+			$type = get_post_type( $doc_id );
+			if ( $type && in_array( $type, $supported, true ) ) {
+				$docs[ $doc_id ] = Post_Meta::get( $doc_id );
+			}
+		}
+
+		$suppress_global = false;
+		foreach ( $docs as $doc ) {
+			$suppress_global = $suppress_global || ( $doc['enabled'] && $doc['suppress_global'] );
 		}
 
 		$chunks = array();
-
-		$suppress_global = $post && $post['enabled'] && $post['suppress_global'];
 		if ( $global['enabled'] && ! $suppress_global ) {
-			$chunks[] = array( 'global', $global['slots'][ $slot ] );
+			$chunks[] = array( 'global', 0, $global['slots'][ $slot ] );
 		}
-		if ( $post && $post['enabled'] ) {
-			$chunks[] = array( 'post', $post['slots'][ $slot ] );
+		foreach ( $docs as $doc_id => $doc ) {
+			if ( $doc['enabled'] ) {
+				$chunks[] = array( 'post', $doc_id, $doc['slots'][ $slot ] );
+			}
 		}
 
 		$html = '';
 		foreach ( $chunks as $chunk ) {
-			list( $source, $data ) = $chunk;
+			list( $source, $doc_id, $data ) = $chunk;
 
-			if ( ! $data['enabled'] || '' === trim( $data['code'] ) ) {
+			if ( ! $data['enabled'] || ! Settings::slot_has_code( $data ) ) {
 				continue;
 			}
 
-			$code = self::wrap( $data['code'], $data['language'] );
+			$code = self::compose( $data );
 
 			/**
 			 * Filters one snippet before output. Return '' to skip it.
@@ -124,18 +144,24 @@ final class Frontend {
 			 * @param string $code    Snippet HTML.
 			 * @param string $slot    head|footer.
 			 * @param string $source  global|post.
-			 * @param int    $post_id Current post ID or 0.
+			 * @param int    $post_id Document the snippet belongs to (0 for global).
 			 */
-			$code = (string) apply_filters( 'ahfcm_snippet_output', $code, $slot, $source, (int) $post_id );
+			$code = (string) apply_filters( 'ahfcm_snippet_output', $code, $slot, $source, (int) $doc_id );
 			if ( '' === $code ) {
 				continue;
 			}
 
 			if ( $global['output_markers'] ) {
-				$label = 'global' === $source ? 'global' : 'post ' . (int) $post_id;
-				$code  = "\n<!-- AHFCM {$slot} ({$label}) -->\n" . $code . "\n<!-- /AHFCM {$slot} ({$label}) -->\n";
+				$label = 'global' === $source ? 'global' : self::marker_label( $doc_id );
+				$code  = "
+<!-- AHFCM {$slot} ({$label}) -->
+" . $code . "
+<!-- /AHFCM {$slot} ({$label}) -->
+";
 			} else {
-				$code = "\n" . $code . "\n";
+				$code = "
+" . $code . "
+";
 			}
 
 			$html .= $code;
@@ -145,20 +171,40 @@ final class Frontend {
 	}
 
 	/**
-	 * Wraps pure CSS / JavaScript in the matching tag. HTML is output as-is.
+	 * Marker label: "post 81", or "breakdance_header 12" for Breakdance documents.
 	 *
-	 * @param string $code     Code.
-	 * @param string $language html|css|javascript.
+	 * @param int $doc_id Post ID.
 	 * @return string
 	 */
-	public static function wrap( $code, $language ) {
-		if ( 'css' === $language ) {
-			return "<style>\n" . $code . "\n</style>";
+	private static function marker_label( $doc_id ) {
+		$type = (string) get_post_type( $doc_id );
+		return ( 0 === strpos( $type, 'breakdance_' ) || 0 === strpos( $type, 'oxygen_' ) ? $type : 'post' ) . ' ' . (int) $doc_id;
+	}
+
+	/**
+	 * Builds one snippet from a slot's parts: CSS (in <style>), then HTML as
+	 * written, then JavaScript (in <script>). Empty parts are skipped.
+	 *
+	 * @param array $slot Normalized slot.
+	 * @return string
+	 */
+	public static function compose( array $slot ) {
+		$out = array();
+		if ( '' !== trim( $slot['css'] ) ) {
+			$out[] = "<style>
+" . $slot['css'] . "
+</style>";
 		}
-		if ( 'javascript' === $language ) {
-			return "<script>\n" . $code . "\n</script>";
+		if ( '' !== trim( $slot['html'] ) ) {
+			$out[] = $slot['html'];
 		}
-		return $code;
+		if ( '' !== trim( $slot['js'] ) ) {
+			$out[] = "<script>
+" . $slot['js'] . "
+</script>";
+		}
+		return implode( "
+", $out );
 	}
 
 	/**
