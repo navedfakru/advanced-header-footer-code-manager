@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AHFCM_VERSION', '2.2.0' );
+define( 'AHFCM_VERSION', '2.2.1' );
 define( 'AHFCM_FILE', __DIR__ . '/advanced-header-footer-code-manager.php' );
 define( 'AHFCM_DIR', plugin_dir_path( AHFCM_FILE ) );
 define( 'AHFCM_URL', plugin_dir_url( AHFCM_FILE ) );

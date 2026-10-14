@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/icon-128x128.png" width="96" height="96" alt="Advanced Header &amp; Footer Code Manager icon"></p>
+
 # Advanced Header & Footer Code Manager
 
 Add trusted **HTML, CSS and JavaScript** to `<head>` and before `</body>`, either site-wide,
@@ -5,7 +7,7 @@ per page, or per **Breakdance / Oxygen** template, header, footer, popup or glob
 You edit the code in CodeMirror, with autocomplete, linting, formatting and a color picker,
 from the **block editor**, the **Breakdance / Oxygen builder**, or the settings app.
 
-- Version 2.2.0, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
+- Version 2.2.1, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
 - Integrations: Gutenberg (block editor), Breakdance 2+, Oxygen 6 (Oxygen Classic 4.x is not supported)
 - License: GPL-2.0-or-later. It bundles js-beautify 1.15.4 (MIT).
 
@@ -139,6 +141,8 @@ advanced-header-footer-code-manager/
 │   ├── css/{admin,editor,panel}.css
 │   ├── js/{core,editor,panel}.js
 │   ├── js/integrations/gutenberg.js
+│   ├── images/{ahfcm-icon,ahfcm-icon-mono,ahfcm-glyph}.svg, images/integrations/
+│   ├── icon-{128x128,256x256,512x512}.png
 │   └── vendor/js-beautify/
 ├── languages/
 └── tests/{verify.php, js/core.test.js}
@@ -150,6 +154,23 @@ Implement `AHFCM\Integration\IntegrationInterface` (name, label, `is_active()`,
 `register()`, template types, documents for the request) and add it with the
 `ahfcm_integrations` filter.
 
+## Brand
+
+| Token | Light | Dark (code panel) | Use |
+|---|---|---|---|
+| `--ahfcm-brand-primary` | `#5B35E8` | `#A78BFA` | primary buttons, active tab, links, switches |
+| `--ahfcm-brand-hover` | `#4827CC` | `#C4B5FD` | hover and active states |
+| `--ahfcm-brand-deep` | `#3820A8` | `#C4B5FD` | emphasis |
+| `--ahfcm-brand-tint` | `#F0EBFF` | `#30264D` | selected backgrounds |
+| `--ahfcm-bg-surface` / `--ahfcm-bg-subtle` | `#FFFFFF` / `#F9FAFC` | `#191B24` / `#20232E` | surfaces |
+| `--ahfcm-text-primary` / `--ahfcm-text-secondary` | `#171923` / `#5D6472` | `#F5F6FA` / `#B4B9C8` | text |
+| `--ahfcm-border` / `--ahfcm-border-strong` | `#E2E5EC` / `#CBD0DC` | `#343847` / `#4A5062` | borders |
+
+All tokens are defined once in `assets/css/editor.css` (scoped to `.ahfcm-app`); the
+code panel swaps in the dark set in `assets/css/panel.css`. Icons live in
+`assets/images/` (`ahfcm-icon.svg` full colour, `ahfcm-icon-mono.svg` one colour,
+`ahfcm-glyph.svg` 24px toolbar glyph) and `assets/icon-{128,256,512}.png`.
+
 ## Storage
 
 | Data | Where |
@@ -159,7 +180,7 @@ Implement `AHFCM\Integration\IntegrationInterface` (name, label, `is_active()`,
 | Plugin version | option `ahfcm_version` |
 | Per-post / per-template code | post meta `_ahfcm_settings` (protected; stored with revisions) |
 
-2.2.0 doesn't change any stored data. Data from 1.x carries over unchanged, and older
+2.2.x doesn't change any stored data. Data from 1.x carries over unchanged, and older
 formats are still converted when read.
 
 ## Hooks
@@ -204,4 +225,4 @@ Deactivating never deletes anything. Deleting the plugin removes its data **only
 ## Rollback
 
 Version 1.1.1 is tagged in git history (commit `c53a23a`). Stored data is compatible in
-both directions between 1.1.1 and 2.2.0.
+both directions between 1.1.1 and 2.2.1.

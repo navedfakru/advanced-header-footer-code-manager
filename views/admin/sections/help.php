@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 
 use AHFCM\Editor\Fields;
 ?>
-<section class="ahfcm-panel ahfcm-help" id="ahfcm-section-help" data-ahfcm-panel="help" role="tabpanel" hidden>
+<section class="ahfcm-panel ahfcm-help" id="ahfcm-section-help" data-ahfcm-panel="help" role="tabpanel" aria-labelledby="ahfcm-tab-help" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Help', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'How code is placed, and the editor’s keyboard shortcuts.', 'advanced-header-footer-code-manager' ); ?></p>

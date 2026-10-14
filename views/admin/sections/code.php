@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 use AHFCM\Core\Settings;
 use AHFCM\Editor\Fields;
 ?>
-<section class="ahfcm-panel" id="ahfcm-section-code" data-ahfcm-panel="code" role="tabpanel">
+<section class="ahfcm-panel" id="ahfcm-section-code" data-ahfcm-panel="code" role="tabpanel" aria-labelledby="ahfcm-tab-code" tabindex="0">
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Global code', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'Runs on every page of the site. Pages, templates and global blocks can add their own code from their editor.', 'advanced-header-footer-code-manager' ); ?></p>

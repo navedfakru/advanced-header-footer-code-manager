@@ -20,8 +20,8 @@ use AHFCM\Editor\Fields;
 	<div class="ahfcm-bd-backdrop" data-ahfcm-bd-backdrop>
 		<div class="ahfcm-app ahfcm-bd ahfcm-theme-<?php echo esc_attr( $settings['editor_theme'] ); ?>" role="dialog" aria-modal="true" aria-labelledby="ahfcm-bd-title" data-ahfcm-root data-ahfcm-context="builder">
 			<header class="ahfcm-bd__header">
-				<span class="ahfcm-bd__logo" aria-hidden="true">
-					<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="m8.6 16.6-4.6-4.6 4.6-4.6L7.2 6 1.2 12l6 6 1.4-1.4Zm6.8 0 4.6-4.6-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z"/></svg>
+				<span class="ahfcm-bd__logo">
+					<img src="<?php echo esc_url( AHFCM_URL . 'assets/images/ahfcm-icon.svg' ); ?>" alt="" width="28" height="28">
 				</span>
 				<h2 id="ahfcm-bd-title" class="ahfcm-bd__title"><?php esc_html_e( 'Header & Footer Code', 'advanced-header-footer-code-manager' ); ?></h2>
 
@@ -45,7 +45,7 @@ use AHFCM\Editor\Fields;
 				<?php if ( $can_post ) : ?>
 					<section class="ahfcm-bd__pane" data-ahfcm-bd-pane="post" role="tabpanel">
 						<p class="ahfcm-bd__notice" data-ahfcm-bd-unsupported hidden>
-							<?php esc_html_e( 'Code is not enabled for this content type. Turn it on under Settings → Header & Footer Code → Settings (“Per-page code on” or “Breakdance templates”), or use the Global tab.', 'advanced-header-footer-code-manager' ); ?>
+							<?php esc_html_e( 'Code is not enabled for this content type. Turn it on under Settings → Header & Footer Code (Output → “Per-page code on”, or Integrations → “Code on”), or use the Global tab.', 'advanced-header-footer-code-manager' ); ?>
 						</p>
 						<div data-ahfcm-bd-form>
 							<div class="ahfcm-metabox__bar">

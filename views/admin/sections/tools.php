@@ -16,7 +16,7 @@ use AHFCM\Admin\LegacyImport;
 use AHFCM\Core\Settings;
 use AHFCM\Editor\Fields;
 ?>
-<section class="ahfcm-panel" id="ahfcm-section-tools" data-ahfcm-panel="tools" role="tabpanel" hidden>
+<section class="ahfcm-panel" id="ahfcm-section-tools" data-ahfcm-panel="tools" role="tabpanel" aria-labelledby="ahfcm-tab-tools" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Tools', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'Import from the old snippet and restore earlier versions of the global code.', 'advanced-header-footer-code-manager' ); ?></p>

@@ -11,7 +11,7 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<section class="ahfcm-panel" id="ahfcm-section-output" data-ahfcm-panel="output" role="tabpanel" hidden>
+<section class="ahfcm-panel" id="ahfcm-section-output" data-ahfcm-panel="output" role="tabpanel" aria-labelledby="ahfcm-tab-output" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Output', 'advanced-header-footer-code-manager' ); ?></h2>
 		<p><?php esc_html_e( 'Where per-page code is available and where code lands in the page.', 'advanced-header-footer-code-manager' ); ?></p>

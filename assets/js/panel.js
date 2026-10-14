@@ -176,7 +176,7 @@
 		section.innerHTML =
 			'<div id="' + BUTTON_ID + '" class="breakdance-toolbar-icon-button" role="button" tabindex="0" aria-pressed="false">' +
 				'<div class="breakdance-icon" style="width: 18px; height: 18px;">' +
-					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.6 16.6-4.6-4.6 4.6-4.6L7.2 6 1.2 12l6 6 1.4-1.4Zm6.8 0 4.6-4.6-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z"/></svg>' +
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" style="fill:none" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/><path d="M3 8.5h18M9.4 11.3l-2.6 2.7 2.6 2.7M14.6 11.3l2.6 2.7-2.6 2.7M13 10.8l-2 6.4" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/></svg>' +
 				'</div>' +
 			'</div>';
 		var button = section.firstChild;

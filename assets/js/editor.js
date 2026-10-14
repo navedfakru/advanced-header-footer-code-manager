@@ -852,6 +852,7 @@
 				var active = this.getAttribute( 'data-ahfcm-tab' ) === name;
 				this.classList.toggle( 'is-active', active );
 				this.setAttribute( 'aria-selected', active ? 'true' : 'false' );
+				this.setAttribute( 'tabindex', active ? '0' : '-1' );
 			} );
 			$( '[data-ahfcm-panel]' ).each( function () {
 				this.hidden = this.getAttribute( 'data-ahfcm-panel' ) !== name;
@@ -872,7 +873,26 @@
 			show( name );
 		} );
 
+		// Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
+		$tabs.on( 'keydown', function ( e ) {
+			var i = $tabs.index( this );
+			var last = $tabs.length - 1;
+			var next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: last }[ e.key ];
+			if ( next === undefined ) {
+				return;
+			}
+			e.preventDefault();
+			next = next > last ? 0 : next < 0 ? last : next;
+			$tabs.eq( next ).trigger( 'click' ).trigger( 'focus' );
+		} );
+
 		show( ( window.location.hash || '#code' ).slice( 1 ) );
+
+		// Announce the save result (the settings page reloads after saving).
+		var $notice = $( '.ahfcm-shell .notice' ).first();
+		if ( $notice.length && wp && wp.a11y && wp.a11y.speak ) {
+			wp.a11y.speak( $notice.text().trim(), $notice.hasClass( 'notice-error' ) ? 'assertive' : 'polite' );
+		}
 	}
 
 	/* ---------- Boot ---------- */
