@@ -9,6 +9,10 @@
  *     suppress_global  bool  Skip global code on this post.
  *     slots[head|footer] { html, css, js, enabled }
  *
+ * Meta key `_ahfcm_history` (protected, single) keeps the previous
+ * HISTORY_LIMIT versions, newest first: { time, user, value }. Every change is
+ * also recorded in the change log (ChangeLog).
+ *
  * The meta is not exposed through WordPress' REST API. It is saved by the
  * meta box (Classic editor), and by the editor panel through the plugin's own
  * REST routes (block editor, Breakdance, Oxygen).
@@ -28,9 +32,12 @@ defined( 'ABSPATH' ) || exit;
 final class PostMeta {
 
 	const META_KEY     = '_ahfcm_settings';
+	const HISTORY_META = '_ahfcm_history';
 	const NONCE_FIELD  = '_ahfcm_nonce';
 	const FORM_FIELD   = 'ahfcm';
 	const NONCE_PREFIX = 'ahfcm_save_post_';
+
+	const HISTORY_LIMIT = 10;
 
 	/**
 	 * Registers hooks.
@@ -193,7 +200,8 @@ final class PostMeta {
 	}
 
 	/**
-	 * Saves an already-normalized value (or deletes it when empty).
+	 * Saves a value (or deletes it when empty). The previous version goes to
+	 * the post's history and the change is logged.
 	 *
 	 * Core unslashes meta values before storing them, so the value is slashed
 	 * first to keep backslashes in code (e.g. JavaScript regexes) intact.
@@ -203,14 +211,155 @@ final class PostMeta {
 	 * @return void
 	 */
 	public static function save( $post_id, array $data ) {
-		$data = self::normalize( $data );
+		$post_id   = (int) $post_id;
+		$data      = self::normalize( $data );
+		$old       = self::get( $post_id );
+		$restoring = ChangeLog::take_restore();
+		$changed   = $old !== $data;
+
+		if ( $changed && ! self::is_empty( $old ) ) {
+			self::push_history( $post_id, $old );
+		}
 
 		if ( self::is_empty( $data ) ) {
 			delete_post_meta( $post_id, self::META_KEY );
-			return;
+		} else {
+			update_post_meta( $post_id, self::META_KEY, wp_slash( $data ) );
 		}
 
-		update_post_meta( $post_id, self::META_KEY, wp_slash( $data ) );
+		if ( ! $changed ) {
+			return;
+		}
+		if ( $restoring ) {
+			$action = ChangeLog::ACTION_PAGE_RESTORE;
+		} elseif ( self::is_empty( $data ) ) {
+			$action = ChangeLog::ACTION_PAGE_CLEARED;
+		} else {
+			$action = ChangeLog::ACTION_PAGE_CODE;
+		}
+		ChangeLog::add( $action, $post_id, self::describe_change( $old, $data ) );
+	}
+
+	/**
+	 * What changed between two versions of a post's code.
+	 *
+	 * @param array $old Normalized value.
+	 * @param array $new Normalized value.
+	 * @return string
+	 */
+	private static function describe_change( array $old, array $new ) {
+		$details = array();
+		if ( $old['enabled'] !== $new['enabled'] ) {
+			$details[] = $new['enabled'] ? __( 'Page code turned on', 'advanced-header-footer-code-manager' ) : __( 'Page code turned off', 'advanced-header-footer-code-manager' );
+		}
+		if ( $old['suppress_global'] !== $new['suppress_global'] ) {
+			$details[] = $new['suppress_global'] ? __( 'Global code skipped here', 'advanced-header-footer-code-manager' ) : __( 'Global code loaded again', 'advanced-header-footer-code-manager' );
+		}
+		$slots = ChangeLog::describe_slots( $old['slots'], $new['slots'] );
+		if ( '' !== $slots ) {
+			$details[] = $slots;
+		}
+		return implode( ' · ', $details );
+	}
+
+	/**
+	 * Adds a version to the front of a post's history.
+	 *
+	 * @param int   $post_id Post ID.
+	 * @param array $value   Normalized value.
+	 * @return void
+	 */
+	private static function push_history( $post_id, array $value ) {
+		$history = self::get_history( $post_id );
+		array_unshift(
+			$history,
+			array(
+				'time'  => time(),
+				'user'  => get_current_user_id(),
+				'value' => $value,
+			)
+		);
+		update_post_meta( $post_id, self::HISTORY_META, wp_slash( array_slice( $history, 0, self::HISTORY_LIMIT ) ) );
+	}
+
+	/**
+	 * A post's earlier versions, newest first.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return array[]
+	 */
+	public static function get_history( $post_id ) {
+		$history = get_post_meta( (int) $post_id, self::HISTORY_META, true );
+		return is_array( $history ) ? array_values( array_filter( $history, 'is_array' ) ) : array();
+	}
+
+	/**
+	 * Restores an earlier version. The version it replaces goes to the history.
+	 *
+	 * @param int $post_id Post ID.
+	 * @param int $index   History index (0 = newest).
+	 * @return bool Whether that version existed.
+	 */
+	public static function restore( $post_id, $index ) {
+		$history = self::get_history( $post_id );
+		if ( ! isset( $history[ $index ]['value'] ) || ! is_array( $history[ $index ]['value'] ) ) {
+			return false;
+		}
+		ChangeLog::mark_restore();
+		self::save( $post_id, $history[ $index ]['value'] );
+		return true;
+	}
+
+	/**
+	 * Posts that have earlier versions, most recently changed first.
+	 *
+	 * @param int $limit Maximum number of posts.
+	 * @return int[]
+	 */
+	public static function posts_with_history( $limit = 50 ) {
+		$ids = get_posts(
+			array(
+				'post_type'      => 'any',
+				'post_status'    => 'any',
+				'posts_per_page' => 200,
+				'fields'         => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Admin tools screen only.
+				'meta_key'       => self::HISTORY_META,
+			)
+		);
+		$ids = array_merge( $ids, self::template_posts_with_history() );
+
+		$times = array();
+		foreach ( array_unique( array_map( 'intval', $ids ) ) as $id ) {
+			$history = self::get_history( $id );
+			if ( $history ) {
+				$times[ $id ] = (int) $history[0]['time'];
+			}
+		}
+		arsort( $times );
+		return array_slice( array_keys( $times ), 0, $limit );
+	}
+
+	/**
+	 * Builder documents (not public, so missed by post_type "any") with history.
+	 *
+	 * @return int[]
+	 */
+	private static function template_posts_with_history() {
+		$types = Loader::enabled_template_types();
+		if ( ! $types ) {
+			return array();
+		}
+		return get_posts(
+			array(
+				'post_type'      => $types,
+				'post_status'    => 'any',
+				'posts_per_page' => 200,
+				'fields'         => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Admin tools screen only.
+				'meta_key'       => self::HISTORY_META,
+			)
+		);
 	}
 
 	/**

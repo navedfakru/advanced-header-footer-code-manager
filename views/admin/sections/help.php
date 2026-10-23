@@ -29,6 +29,17 @@ use AHFCM\Editor\Fields;
 		</div>
 
 		<div class="ahfcm-card">
+			<h3 class="ahfcm-card__title"><?php esc_html_e( 'Security', 'advanced-header-footer-code-manager' ); ?></h3>
+			<ul class="ahfcm-list">
+				<li><?php esc_html_e( 'Only administrators who can publish unfiltered HTML can add or change code. Editors can be allowed to edit page code under Output.', 'advanced-header-footer-code-manager' ); ?></li>
+				<li><?php esc_html_e( 'DISALLOW_FILE_EDIT, DISALLOW_FILE_MODS and DISALLOW_UNFILTERED_HTML lock code editing for everyone. Existing code keeps running.', 'advanced-header-footer-code-manager' ); ?></li>
+				<li><?php esc_html_e( 'Every change is listed in the change log, and earlier versions of global and page code can be restored (Tools).', 'advanced-header-footer-code-manager' ); ?></li>
+				<li><?php esc_html_e( 'If a snippet breaks the site, safe mode stops all code from printing without deleting it (Tools).', 'advanced-header-footer-code-manager' ); ?></li>
+				<li><?php esc_html_e( 'Code runs for every visitor exactly as written. Only paste code you understand and trust, from sources you trust.', 'advanced-header-footer-code-manager' ); ?></li>
+			</ul>
+		</div>
+
+		<div class="ahfcm-card">
 			<h3 class="ahfcm-card__title"><?php esc_html_e( 'Keyboard shortcuts', 'advanced-header-footer-code-manager' ); ?></h3>
 			<dl class="ahfcm-keys">
 				<dt><kbd>Ctrl</kbd> <kbd>Space</kbd></dt><dd><?php esc_html_e( 'Autocomplete', 'advanced-header-footer-code-manager' ); ?></dd>

@@ -329,7 +329,10 @@ final class Injector {
 		 *
 		 * @param bool $inject Whether to inject.
 		 */
-		return (bool) apply_filters( 'ahfcm_should_inject', $inject );
+		$inject = (bool) apply_filters( 'ahfcm_should_inject', $inject );
+
+		// Safe mode wins over the filter, so a broken site can always be reached.
+		return $inject && ! SafeMode::active();
 	}
 
 	/**

@@ -27,11 +27,13 @@ function ahfcm_uninstall_site() {
 
 	delete_option( 'ahfcm_global_settings' );
 	delete_option( 'ahfcm_global_history' );
+	delete_option( 'ahfcm_change_log' );
 	delete_option( 'ahfcm_version' );
 	delete_transient( 'ahfcm_missing_body_open' ); // Left by 1.0.0.
 
 	// Removes the key from every post, including revisions.
 	delete_post_meta_by_key( '_ahfcm_settings' );
+	delete_post_meta_by_key( '_ahfcm_history' );
 }
 
 if ( is_multisite() ) {

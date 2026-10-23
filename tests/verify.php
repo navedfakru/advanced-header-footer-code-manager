@@ -17,8 +17,11 @@
 // phpcs:disable WordPress.Security, WordPress.WP.GlobalVariablesOverride, WordPress.PHP.DevelopmentFunctions
 
 use AHFCM\Admin\LegacyImport;
+use AHFCM\Core\ChangeLog;
 use AHFCM\Core\Injector;
 use AHFCM\Core\PostMeta;
+use AHFCM\Core\SafeMode;
+use AHFCM\Core\Security;
 use AHFCM\Core\Settings;
 use AHFCM\Core\Visibility;
 use AHFCM\Integration\Loader;
@@ -57,9 +60,15 @@ function ahfcm_check( $name, $ok, $info = '' ) {
  * @return string Body ('' on error).
  */
 function ahfcm_fetch( $url ) {
-	$url      = add_query_arg( 'ahfcm_nocache', wp_generate_password( 8, false ), $url );
-	$response = wp_remote_get( $url, array( 'timeout' => 30, 'sslverify' => false, 'redirection' => 3 ) );
-	return is_wp_error( $response ) ? '' : (string) wp_remote_retrieve_body( $response );
+	// Retries: small local servers (e.g. Local by Flywheel) may route a request
+	// to the PHP worker that is busy running this suite, which then times out.
+	for ( $attempt = 0; $attempt < 4; $attempt++ ) {
+		$response = wp_remote_get( add_query_arg( 'ahfcm_nocache', wp_generate_password( 8, false ), $url ), array( 'timeout' => 10, 'sslverify' => false, 'redirection' => 3 ) );
+		if ( ! is_wp_error( $response ) ) {
+			return (string) wp_remote_retrieve_body( $response );
+		}
+	}
+	return '';
 }
 
 /**
@@ -92,6 +101,7 @@ function ahfcm_submit_meta_box( $post_id, array $fields, $nonce = '' ) {
 
 $ahfcm_original_option = get_option( Settings::OPTION );
 $ahfcm_original_hist   = get_option( Settings::HISTORY_OPTION, null );
+$ahfcm_original_log    = get_option( ChangeLog::OPTION, null );
 $ahfcm_created_posts   = array();
 $ahfcm_created_users   = array();
 $ahfcm_admin_id        = (int) ( get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) )[0] ?? 0 );
@@ -455,7 +465,20 @@ try {
 
 	wp_set_current_user( $editor_id );
 	$editor_can = current_user_can( 'unfiltered_html' );
-	ahfcm_check( '10 Editor (has unfiltered_html on single site) can edit post code but not global code', ! $editor_can || ( current_user_can( 'ahfcm_edit_post_code', $page_b ) && ! current_user_can( 'ahfcm_manage_global' ) ) );
+	ahfcm_check( '10 Editor cannot edit post code by default (administrators only)', ! current_user_can( 'ahfcm_edit_post_code', $page_b ) && ! current_user_can( 'ahfcm_manage_global' ) );
+	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- EDITOR-DEFAULT -->' ) ) ) );
+	ahfcm_check( '10 Editor meta box save is refused by default', false === strpos( PostMeta::get( $page_b )['slots']['head']['html'], 'EDITOR-DEFAULT' ) );
+	ahfcm_check( 'Editor role is not offered toolbar buttons by default', ! isset( Visibility::eligible_roles()['editor'] ) );
+
+	wp_set_current_user( $ahfcm_admin_id );
+	update_option( Settings::OPTION, array_merge( Settings::get(), array( 'editors_page_code' => true ) ) );
+	wp_set_current_user( $editor_id );
+	ahfcm_check( '10 "Editors can edit page code": editor with unfiltered_html can edit post code but not global code', ! $editor_can || ( current_user_can( 'ahfcm_edit_post_code', $page_b ) && ! current_user_can( 'ahfcm_manage_global' ) ) );
+	ahfcm_check( '"Editors can edit page code": editor role is offered toolbar buttons', ! $editor_can || isset( Visibility::eligible_roles()['editor'] ) );
+	wp_set_current_user( $ahfcm_admin_id );
+	update_option( Settings::OPTION, array_merge( Settings::get(), array( 'editors_page_code' => false ) ) );
+	wp_set_current_user( $editor_id );
+	ahfcm_check( 'Turning the setting off removes editor access again', ! current_user_can( 'ahfcm_edit_post_code', $page_b ) );
 
 	wp_set_current_user( $ahfcm_admin_id );
 	ahfcm_check( 'Administrator can manage global code', current_user_can( 'ahfcm_manage_global' ) );
@@ -562,6 +585,114 @@ try {
 	wp_set_current_user( 0 );
 	ahfcm_check( 'REST denies anonymous visitors', 401 === $ahfcm_rest( 'GET', 'post/' . $page_b )->get_status() && 401 === $ahfcm_rest( 'GET', 'global' )->get_status() );
 	wp_set_current_user( $ahfcm_admin_id );
+
+	WP_CLI::line( 'Locked editing (DISALLOW_FILE_EDIT / DISALLOW_FILE_MODS)' );
+	$safe_page             = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'AHFCM safe mode page' ) );
+	$ahfcm_created_posts[] = $safe_page;
+	PostMeta::save( $safe_page, array( 'slots' => array( 'head' => array( 'html' => '<!-- SAFE-CHECK -->' ) ) ) );
+	ahfcm_check( 'Not locked on this site', '' === Security::lock_reason() || defined( 'DISALLOW_FILE_EDIT' ) || defined( 'DISALLOW_FILE_MODS' ) );
+	$ahfcm_lock = function () {
+		return true;
+	};
+	add_filter( 'ahfcm_editing_locked', $ahfcm_lock );
+	ahfcm_check( 'Locked: administrator can no longer edit global or page code', ! current_user_can( 'ahfcm_manage_global' ) && ! current_user_can( 'ahfcm_edit_post_code', $page_b ) );
+	ahfcm_check( 'Locked: administrator can still open the settings page', Security::can_view() && 'filter' === Security::lock_reason() );
+	$locked_before = PostMeta::get( $page_b );
+	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- LOCKED -->' ) ) ) );
+	ahfcm_check( 'Locked: meta box save is refused', PostMeta::get( $page_b ) === $locked_before );
+	ahfcm_check( 'Locked: REST saves are refused', 403 === $ahfcm_rest( 'POST', 'global', array( 'data' => array() ) )->get_status() && 403 === $ahfcm_rest( 'POST', 'post/' . $page_b, array( 'data' => array() ) )->get_status() );
+	require_once ABSPATH . 'wp-admin/includes/admin.php';
+	ob_start();
+	( new AHFCM\Admin\AdminPage() )->render();
+	$locked_page = ob_get_clean();
+	ahfcm_check( 'Locked: settings page is read-only (no form, notice, Tools first)', false === strpos( $locked_page, 'id="ahfcm-settings-form"' ) && false !== strpos( $locked_page, 'Code editing is locked' ) && false !== strpos( $locked_page, 'id="ahfcm-section-tools" data-ahfcm-panel="tools" role="tabpanel" aria-labelledby="ahfcm-tab-tools" tabindex="0">' ) );
+	ahfcm_check( 'Locked: no restore buttons', false === strpos( $locked_page, 'name="action" value="ahfcm_restore' ) );
+	ahfcm_check( 'Locked: existing code still prints', false !== strpos( ( new Injector() )->render( 'head', $safe_page ), '<!-- SAFE-CHECK -->' ) );
+	remove_filter( 'ahfcm_editing_locked', $ahfcm_lock );
+	ahfcm_check( 'Unlocked again', current_user_can( 'ahfcm_manage_global' ) );
+
+	WP_CLI::line( 'Safe mode' );
+	$engine = new Injector();
+	ahfcm_check( 'Safe mode off by default', ! SafeMode::active() && $engine->should_inject() );
+	$_GET[ SafeMode::QUERY_ARG ] = '1';
+	ahfcm_check( '?ahfcm_safe_mode=1 stops output for an administrator', SafeMode::active() && ! $engine->should_inject() );
+	$ahfcm_force = function () {
+		return true;
+	};
+	add_filter( 'ahfcm_should_inject', $ahfcm_force, 99 );
+	ahfcm_check( 'Safe mode wins over the ahfcm_should_inject filter', ! $engine->should_inject() );
+	remove_filter( 'ahfcm_should_inject', $ahfcm_force, 99 );
+	wp_set_current_user( $editor_id );
+	ahfcm_check( '?ahfcm_safe_mode=1 is ignored for non-administrators', ! SafeMode::active() && $engine->should_inject() );
+	wp_set_current_user( $ahfcm_admin_id );
+	unset( $_GET[ SafeMode::QUERY_ARG ] );
+	ahfcm_check( 'Anonymous visitors cannot switch code off with the URL', false !== strpos( ahfcm_fetch( SafeMode::url( get_permalink( $safe_page ) ) ), '<!-- SAFE-CHECK -->' ) );
+	ahfcm_check( 'Safe mode changes nothing stored', '<!-- SAFE-CHECK -->' === PostMeta::get( $safe_page )['slots']['head']['html'] );
+
+	WP_CLI::line( 'Page code history and restore' );
+	$hist_page             = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'AHFCM history page' ) );
+	$ahfcm_created_posts[] = $hist_page;
+	$version               = function ( $n ) {
+		return array( 'slots' => array( 'head' => array( 'html' => '<!-- V' . $n . ' -->', 'js' => 'var v = /\\d+/;' ) ) );
+	};
+	PostMeta::save( $hist_page, $version( 1 ) );
+	ahfcm_check( 'First save keeps no history (nothing earlier)', array() === PostMeta::get_history( $hist_page ) );
+	PostMeta::save( $hist_page, $version( 2 ) );
+	$h = PostMeta::get_history( $hist_page );
+	ahfcm_check( 'Second save keeps the first version, byte-exact', 1 === count( $h ) && '<!-- V1 -->' === $h[0]['value']['slots']['head']['html'] && 'var v = /\\d+/;' === $h[0]['value']['slots']['head']['js'] && get_current_user_id() === $h[0]['user'] );
+	PostMeta::save( $hist_page, $version( 2 ) );
+	ahfcm_check( 'Saving unchanged code adds no history', 1 === count( PostMeta::get_history( $hist_page ) ) );
+	ahfcm_check( 'History meta is protected', is_protected_meta( PostMeta::HISTORY_META, 'post' ) );
+	ahfcm_check( 'Restore brings back the earlier version', PostMeta::restore( $hist_page, 0 ) && '<!-- V1 -->' === PostMeta::get( $hist_page )['slots']['head']['html'] );
+	$h = PostMeta::get_history( $hist_page );
+	ahfcm_check( 'The replaced version goes to the history', 2 === count( $h ) && '<!-- V2 -->' === $h[0]['value']['slots']['head']['html'] );
+	ahfcm_check( 'Restoring a missing entry fails safely', false === PostMeta::restore( $hist_page, 99 ) );
+	for ( $i = 3; $i <= 15; $i++ ) {
+		PostMeta::save( $hist_page, $version( $i ) );
+	}
+	ahfcm_check( 'Page history keeps the last 10 versions', PostMeta::HISTORY_LIMIT === count( PostMeta::get_history( $hist_page ) ) && '<!-- V14 -->' === PostMeta::get_history( $hist_page )[0]['value']['slots']['head']['html'] );
+	ahfcm_check( 'Tools lists the page with history', in_array( $hist_page, PostMeta::posts_with_history(), true ) );
+	ahfcm_check( 'Front end prints the current version only', false !== strpos( ahfcm_fetch( get_permalink( $hist_page ) ), '<!-- V15 -->' ) && false === strpos( ahfcm_fetch( get_permalink( $hist_page ) ), '<!-- V14 -->' ) );
+
+	WP_CLI::line( 'Change log' );
+	$log = ChangeLog::get();
+	ahfcm_check( 'Restore is logged as a restore, with user and page', ChangeLog::ACTION_PAGE_CODE === $log[0]['action'] && (bool) array_filter(
+		$log,
+		function ( $e ) use ( $hist_page ) {
+			return ChangeLog::ACTION_PAGE_RESTORE === $e['action'] && $hist_page === $e['object'] && get_current_user_id() === $e['user'];
+		}
+	) );
+	ahfcm_check( 'Log details name the changed parts, never the code', 'Header: HTML' === $log[0]['details'] && false === strpos( wp_json_encode( $log ), 'V15' ) );
+	PostMeta::save( $hist_page, array() );
+	ahfcm_check( 'Removing all page code is logged', ChangeLog::ACTION_PAGE_CLEARED === ChangeLog::get()[0]['action'] && '' === PostMeta::get( $hist_page )['slots']['head']['html'] );
+	$count = count( ChangeLog::get() );
+	PostMeta::save( $hist_page, array() );
+	ahfcm_check( 'Unchanged saves are not logged', count( ChangeLog::get() ) === $count );
+
+	$g_log                         = Settings::get();
+	$g_log['slots']['footer']['js'] = 'console.log("G-LOG");';
+	update_option( Settings::OPTION, $g_log );
+	$entry = ChangeLog::get()[0];
+	ahfcm_check( 'Global code change is logged', ChangeLog::ACTION_GLOBAL_CODE === $entry['action'] && 0 === $entry['object'] && false !== strpos( $entry['details'], 'Footer: JS' ) );
+	update_option( Settings::OPTION, array_merge( Settings::get(), array( 'output_markers' => false ) ) );
+	ahfcm_check( 'Settings change is logged separately', ChangeLog::ACTION_GLOBAL_SETTINGS === ChangeLog::get()[0]['action'] && false !== strpos( ChangeLog::get()[0]['details'], 'Output markers: off' ) );
+	update_option( Settings::OPTION, array_merge( Settings::get(), array( 'output_markers' => true ) ) );
+	ChangeLog::mark_restore();
+	update_option( Settings::OPTION, $g );
+	ahfcm_check( 'Global restore is logged as a restore', ChangeLog::ACTION_GLOBAL_RESTORE === ChangeLog::get()[0]['action'] );
+	ahfcm_check( 'Global history keeps up to 10 versions', Settings::HISTORY_LIMIT === 10 && count( Settings::get_history() ) <= 10 );
+	ahfcm_check( 'Change log is not autoloaded', ! array_key_exists( ChangeLog::OPTION, wp_load_alloptions() ) );
+	for ( $i = 0; $i < ChangeLog::LIMIT + 5; $i++ ) {
+		ChangeLog::add( ChangeLog::ACTION_PAGE_CODE, $hist_page, 'bulk' );
+	}
+	ahfcm_check( 'Change log keeps the last 200 entries', ChangeLog::LIMIT === count( ChangeLog::get() ) );
+
+	ob_start();
+	( new AHFCM\Admin\AdminPage() )->render();
+	$tools_page = ob_get_clean();
+	ahfcm_check( 'Tools shows safe mode, change log, global and page history', false !== strpos( $tools_page, 'id="ahfcm-safe-mode"' ) && false !== strpos( $tools_page, 'id="ahfcm-change-log"' ) && false !== strpos( $tools_page, 'id="ahfcm-page-history"' ) && false !== strpos( $tools_page, 'value="ahfcm_restore_post"' ) );
+	ahfcm_check( 'Output tab has the "Editors can edit page code" switch', false !== strpos( $tools_page, '[editors_page_code]' ) );
+	ahfcm_check( 'History diffs escape the code they show', false === strpos( $tools_page, '<!-- V14 -->' ) );
 
 	if ( $ahfcm_builder && post_type_exists( $ahfcm_popup_type ) ) {
 		WP_CLI::line( 'Popups opened by a button' );
@@ -771,6 +902,12 @@ try {
 		delete_option( Settings::HISTORY_OPTION );
 	} else {
 		update_option( Settings::HISTORY_OPTION, $ahfcm_original_hist, false );
+	}
+	// Last, because restoring the settings above is itself logged.
+	if ( null === $ahfcm_original_log ) {
+		delete_option( ChangeLog::OPTION );
+	} else {
+		update_option( ChangeLog::OPTION, $ahfcm_original_log, false );
 	}
 }
 

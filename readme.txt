@@ -4,7 +4,7 @@ Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.3.1
+Stable tag: 2.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,8 @@ Add HTML, CSS and JavaScript to the head and footer: site-wide, per page, or per
 * Global code, per-page code, and code on Breakdance/Oxygen templates, headers, footers, popups and global blocks (runs on every page that uses them).
 * Edit from a code icon in the block editor toolbar, a code button in the Breakdance/Oxygen top bar, the Classic editor box, or Settings → Header & Footer Code.
 * CodeMirror editor (bundled with WordPress): autocomplete, linting, folding, search/replace, safe formatting, inline CSS color picker, full screen, dark/light themes.
-* Only users with unfiltered_html can edit code. PHP is never executed.
+* Only administrators can edit code by default; editors can be allowed for page code. PHP is never executed.
+* Safe mode, a change log, and earlier versions of global and page code with one-click restore.
 * Integrations: Gutenberg, Breakdance, Oxygen 6.
 
 * Position per code card: just before </head> / </body>, or a custom wp_head / wp_footer priority. Page code can follow the global position.
@@ -27,13 +28,16 @@ Within the head and the footer, code prints in this order: global code, then the
 
 = Security =
 
-* Editing code requires the unfiltered_html capability (administrators on single sites, super admins on multisite). Every save checks a nonce and the user's capabilities.
+* Only administrators who can publish unfiltered HTML can add or change code (super admins on multisite). Editors can be allowed to edit page code (Output → "Editors can edit page code"); global code always stays administrator-only. Every save checks a nonce and the user's capabilities.
+* Respects the constants hosts use to lock code changes: DISALLOW_FILE_EDIT, DISALLOW_FILE_MODS and DISALLOW_UNFILTERED_HTML lock all code editing (settings page becomes read-only). Existing code keeps running.
+* Safe mode stops all code from printing without deleting it: add ?ahfcm_safe_mode=1 to any URL as an administrator (that page only), or define( 'AHFCM_SAFE_MODE', true ) in wp-config.php (everyone, works even when you cannot log in).
+* Change log: who changed global code, page code or settings, and when (last 200 changes). Earlier versions of global code and of each page's code (last 10 each) can be compared with the current code and restored.
 * Code is stored exactly as typed and output only on normal front-end page views — never in feeds, REST/AJAX responses, embeds or builder previews (unless you allow previews).
 * Nothing is sent to external services. To check for updates, WordPress asks the public GitHub API for the latest release of this plugin (at most every 12 hours; no site data is sent).
 
 = For developers =
 
-Filters: ahfcm_integrations, ahfcm_should_inject, ahfcm_snippet_output, ahfcm_post_types, ahfcm_builder_query_params, ahfcm_breakdance_button_visible, ahfcm_panel_replaces_meta_box. Full documentation and source: https://github.com/navedfakru/advanced-header-footer-code-manager
+Filters: ahfcm_integrations, ahfcm_should_inject, ahfcm_editing_locked, ahfcm_snippet_output, ahfcm_post_types, ahfcm_builder_query_params, ahfcm_breakdance_button_visible, ahfcm_panel_replaces_meta_box. Full documentation and source: https://github.com/navedfakru/advanced-header-footer-code-manager
 
 = Third-party code =
 
@@ -53,7 +57,15 @@ No. Code is only deleted on plugin deletion, and only if you enabled "Permanentl
 
 = Who can edit the code? =
 
-Only users with the unfiltered_html capability. Other users don't see the editors or the toolbar buttons, and the REST endpoints refuse them.
+Administrators who have the unfiltered_html capability. If you turn on Output → "Editors can edit page code", users who can edit a page and publish unfiltered HTML (editors on single sites) can change that page's code too. Everyone else doesn't see the editors or the toolbar buttons, and the REST endpoints refuse them. DISALLOW_FILE_EDIT, DISALLOW_FILE_MODS or DISALLOW_UNFILTERED_HTML lock editing for everyone.
+
+= A snippet broke my site. What now? =
+
+Open the page with ?ahfcm_safe_mode=1 added to the URL while logged in as an administrator: no header or footer code prints on that page. Then fix or turn off the snippet, or restore an earlier version under Settings → Header & Footer Code → Tools. If you cannot log in, add define( 'AHFCM_SAFE_MODE', true ); to wp-config.php.
+
+= Can I see who changed the code? =
+
+Yes. Tools → Change log lists every change to global code, page code and settings with the user and time. The log records what changed, not the code itself; earlier code is in the history.
 
 = Does it need Breakdance or Oxygen? =
 
@@ -63,6 +75,11 @@ No. Global and per-page code work with any theme. Breakdance and Oxygen 6 integr
 
 No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
+== Upgrade Notice ==
+
+= 2.4.0 =
+Editors can no longer edit page code unless you turn on Output → "Editors can edit page code". Adds safe mode, a change log and page code history.
+
 == Screenshots ==
 
 1. Code panel in the block editor, Breakdance and Oxygen: page and global code, each with a Position and HTML, CSS and JS tabs.
@@ -70,6 +87,15 @@ No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 3. Output: content types with per-page code, global header and footer positions, HTML comment markers.
 
 == Changelog ==
+
+= 2.4.0 =
+* Security: only administrators can edit code by default. New setting Output → "Editors can edit page code" (off) lets editors with unfiltered_html edit page code again; global code stays administrator-only.
+* Security: DISALLOW_FILE_EDIT and DISALLOW_FILE_MODS lock code editing for everyone, like DISALLOW_UNFILTERED_HTML. The settings page stays open read-only (change log, history, safe mode); existing code keeps running. Filter: ahfcm_editing_locked.
+* New: safe mode. ?ahfcm_safe_mode=1 (administrators, that page only) or define( 'AHFCM_SAFE_MODE', true ) in wp-config.php stops all code from printing without deleting it. Shown in the admin bar.
+* New: change log (Tools): who changed global code, page code or settings, and when — last 200 changes.
+* New: page code history. The last 10 versions of each page's, post's or builder template's code are kept and can be restored from Tools. Global code keeps 10 versions (was 5).
+* New: "Show changes" compares any earlier version with the current code before you restore it.
+* New: Security card in Help.
 
 = 2.3.1 =
 * Updates from GitHub: new versions published as GitHub releases show up in Dashboard → Updates and on the Plugins screen, and install like any other update (automatic updates work too).

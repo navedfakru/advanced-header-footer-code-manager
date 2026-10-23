@@ -1,6 +1,6 @@
 <?php
 /**
- * Section: Output (where per-page code is available, positions, markers).
+ * Section: Output (who edits page code, where it is available, positions, markers).
  *
  * @var array           $settings   Global settings.
  * @var string          $ahfcm_opt  Option name.
@@ -16,10 +16,24 @@ use AHFCM\Editor\Fields;
 <section class="ahfcm-panel" id="ahfcm-section-output" data-ahfcm-panel="output" role="tabpanel" aria-labelledby="ahfcm-tab-output" tabindex="0" hidden>
 	<header class="ahfcm-section-head">
 		<h2><?php esc_html_e( 'Output', 'advanced-header-footer-code-manager' ); ?></h2>
-		<p><?php esc_html_e( 'Where per-page code is available and where code lands in the page.', 'advanced-header-footer-code-manager' ); ?></p>
+		<p><?php esc_html_e( 'Who can edit page code, where it is available and where code lands in the page.', 'advanced-header-footer-code-manager' ); ?></p>
 	</header>
 
 	<div class="ahfcm-card ahfcm-settings">
+		<div class="ahfcm-row">
+			<div class="ahfcm-row__label">
+				<span><?php esc_html_e( 'Editors can edit page code', 'advanced-header-footer-code-manager' ); ?></span>
+				<p><?php esc_html_e( 'Off (recommended): only administrators can add or change code, anywhere. On: users who can edit a page and publish unfiltered HTML (editors on single sites) can also change that page\'s code. Global code always stays administrator-only.', 'advanced-header-footer-code-manager' ); ?></p>
+			</div>
+			<div class="ahfcm-row__control">
+				<label class="ahfcm-switch">
+					<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[editors_page_code]" value="0">
+					<input type="checkbox" role="switch" aria-label="<?php esc_attr_e( 'Editors can edit page code', 'advanced-header-footer-code-manager' ); ?>" name="<?php echo esc_attr( $ahfcm_opt ); ?>[editors_page_code]" value="1" <?php checked( $settings['editors_page_code'] ); ?>>
+					<span class="ahfcm-switch__track" aria-hidden="true"></span>
+				</label>
+			</div>
+		</div>
+
 		<div class="ahfcm-row">
 			<div class="ahfcm-row__label">
 				<span><?php esc_html_e( 'Per-page code on', 'advanced-header-footer-code-manager' ); ?></span>

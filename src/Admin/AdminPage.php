@@ -1,13 +1,19 @@
 <?php
 /**
  * Settings → Header & Footer Code: the settings app, plus its tool actions
- * (legacy import, history restore).
+ * (legacy import, global and page code restore).
+ *
+ * Administrators can always open the page. While code editing is locked
+ * (Security::lock_reason()) it is read-only: change log, history and safe mode.
  *
  * @package AHFCM
  */
 
 namespace AHFCM\Admin;
 
+use AHFCM\Core\ChangeLog;
+use AHFCM\Core\PostMeta;
+use AHFCM\Core\SafeMode;
 use AHFCM\Core\Security;
 use AHFCM\Core\Settings;
 use AHFCM\Core\Visibility;
@@ -41,6 +47,7 @@ final class AdminPage {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'admin_post_ahfcm_migrate', array( $this, 'handle_migration' ) );
 		add_action( 'admin_post_ahfcm_restore', array( $this, 'handle_restore' ) );
+		add_action( 'admin_post_ahfcm_restore_post', array( $this, 'handle_restore_post' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( AHFCM_FILE ), array( $this, 'action_links' ) );
 	}
 
@@ -63,7 +70,7 @@ final class AdminPage {
 		$this->page_hook = (string) add_options_page(
 			__( 'Header & Footer Code', 'advanced-header-footer-code-manager' ),
 			__( 'Header & Footer Code', 'advanced-header-footer-code-manager' ),
-			Security::CAP_GLOBAL,
+			Security::CAP_VIEW,
 			self::PAGE_SLUG,
 			array( $this, 'render' )
 		);
@@ -76,7 +83,7 @@ final class AdminPage {
 	 * @return string[]
 	 */
 	public function action_links( $links ) {
-		if ( Security::can_manage_global() ) {
+		if ( Security::can_view() ) {
 			array_unshift( $links, sprintf( '<a href="%s">%s</a>', esc_url( self::url() ), esc_html__( 'Settings', 'advanced-header-footer-code-manager' ) ) );
 		}
 		return $links;
@@ -102,12 +109,17 @@ final class AdminPage {
 	 * @return void
 	 */
 	public function render() {
-		if ( ! Security::can_manage_global() ) {
+		if ( ! Security::can_view() ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to manage header and footer code.', 'advanced-header-footer-code-manager' ) );
 		}
 
 		$settings      = Settings::get();
 		$history       = Settings::get_history();
+		$lock_reason   = Security::lock_reason();
+		$can_edit      = Security::can_manage_global();
+		$change_log    = ChangeLog::get();
+		$page_history  = PostMeta::posts_with_history();
+		$safe_constant = SafeMode::by_constant();
 		$report        = $this->pull_report();
 		$legacy_active = LegacyImport::legacy_active();
 		$legacy_count  = count( LegacyImport::find_legacy_posts() );
@@ -127,7 +139,7 @@ final class AdminPage {
 	 * @return void
 	 */
 	public function handle_migration() {
-		$this->guard( 'ahfcm_migrate' );
+		$this->guard( 'ahfcm_migrate', Security::can_manage_global() );
 
 		$dry_run = ! isset( $_POST['ahfcm_run'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Checked in guard().
 		$report  = LegacyImport::run(
@@ -157,7 +169,7 @@ final class AdminPage {
 	 * @return void
 	 */
 	public function handle_restore() {
-		$this->guard( 'ahfcm_restore' );
+		$this->guard( 'ahfcm_restore', Security::can_manage_global() );
 
 		$index   = isset( $_POST['index'] ) ? absint( $_POST['index'] ) : -1; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Checked in guard().
 		$history = Settings::get_history();
@@ -169,7 +181,9 @@ final class AdminPage {
 			$restored['slots']   = $history[ $index ]['value']['slots'];
 
 			// The current version goes into history automatically (record_history).
+			ChangeLog::mark_restore();
 			update_option( Settings::OPTION, Settings::normalize( $restored ) );
+			ChangeLog::take_restore(); // Unused when the restored version equals the current one.
 			$notice = 'restored';
 		}
 
@@ -178,13 +192,32 @@ final class AdminPage {
 	}
 
 	/**
-	 * Capability + nonce check for tool actions.
+	 * Restores a page code history entry.
 	 *
-	 * @param string $action Nonce action.
 	 * @return void
 	 */
-	private function guard( $action ) {
-		if ( ! Security::can_manage_global() ) {
+	public function handle_restore_post() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Checked in guard().
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$index   = isset( $_POST['index'] ) ? absint( $_POST['index'] ) : -1;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		$this->guard( 'ahfcm_restore_post_' . $post_id, $post_id && Security::can_edit_post_code( $post_id ) );
+
+		$notice = PostMeta::restore( $post_id, $index ) ? 'restored_post' : 'restore_failed';
+
+		wp_safe_redirect( self::url( array( 'ahfcm_notice' => $notice ) ) . '#tools' );
+		exit;
+	}
+
+	/**
+	 * Capability + nonce check for tool actions.
+	 *
+	 * @param string $action  Nonce action.
+	 * @param bool   $allowed Result of the capability check.
+	 * @return void
+	 */
+	private function guard( $action, $allowed ) {
+		if ( ! $allowed ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'advanced-header-footer-code-manager' ), '', array( 'response' => 403 ) );
 		}
 		check_admin_referer( $action );

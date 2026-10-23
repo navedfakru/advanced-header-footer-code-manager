@@ -27,10 +27,13 @@
  *     builder_button_roles     array|null  Roles that see it; null = every role allowed to edit code.
  *     builder_button_hide_users int[] Users who never see it.
  *     output_markers           bool   Wrap output in HTML comments.
+ *     editors_page_code        bool   Users without manage_options (editors) may edit
+ *                                     page code, if they also have unfiltered_html.
  *     delete_data_on_uninstall bool
  *
- * Option `ahfcm_global_history` (not autoloaded) keeps the last few versions of
- * the global code for one-click recovery.
+ * Option `ahfcm_global_history` (not autoloaded) keeps the last HISTORY_LIMIT
+ * versions of the global code for one-click recovery. Every change is also
+ * recorded in the change log (ChangeLog).
  *
  * @package AHFCM
  */
@@ -78,7 +81,7 @@ final class Settings {
 	/** Hook priority used for PLACEMENT_END. */
 	const END_PRIORITY = PHP_INT_MAX;
 
-	const HISTORY_LIMIT = 5;
+	const HISTORY_LIMIT = 10;
 
 	const SLOTS = array( 'head', 'footer' );
 
@@ -101,6 +104,7 @@ final class Settings {
 		add_action( 'admin_init', array( $this, 'register_setting' ) );
 		add_filter( 'option_page_capability_' . self::GROUP, array( __CLASS__, 'option_page_capability' ) );
 		add_action( 'update_option_' . self::OPTION, array( $this, 'record_history' ), 10, 2 );
+		add_action( 'add_option_' . self::OPTION, array( $this, 'record_first_save' ), 10, 2 );
 		add_action( 'add_option_' . self::OPTION, array( __CLASS__, 'flush_cache' ) );
 		add_action( 'update_option_' . self::OPTION, array( __CLASS__, 'flush_cache' ) );
 		add_action( 'delete_option_' . self::OPTION, array( __CLASS__, 'flush_cache' ) );
@@ -181,6 +185,7 @@ final class Settings {
 			'builder_button_hide_users' => array(),
 			'integrations'             => array(),
 			'output_markers'           => true,
+			'editors_page_code'        => false,
 			'delete_data_on_uninstall' => false,
 		);
 	}
@@ -278,7 +283,7 @@ final class Settings {
 			}
 		}
 
-		foreach ( array( 'run_in_builder_preview', 'output_markers', 'delete_data_on_uninstall', 'builder_button', 'editor_button' ) as $flag ) {
+		foreach ( array( 'run_in_builder_preview', 'output_markers', 'delete_data_on_uninstall', 'builder_button', 'editor_button', 'editors_page_code' ) as $flag ) {
 			$out[ $flag ] = self::to_bool( isset( $raw[ $flag ] ) ? $raw[ $flag ] : $defaults[ $flag ] );
 		}
 
@@ -389,30 +394,95 @@ final class Settings {
 	}
 
 	/**
-	 * Saves the previous global code to the history option when code changes.
+	 * When global settings change: keeps the previous code in the history
+	 * (when code changed) and records the change in the change log.
 	 *
 	 * @param mixed $old_value Previous value.
 	 * @param mixed $new_value New value.
 	 * @return void
 	 */
 	public function record_history( $old_value, $new_value ) {
-		$old = self::normalize( is_array( $old_value ) ? $old_value : array() );
-		$new = self::normalize( is_array( $new_value ) ? $new_value : array() );
+		$old       = self::normalize( is_array( $old_value ) ? $old_value : array() );
+		$new       = self::normalize( is_array( $new_value ) ? $new_value : array() );
+		$restoring = ChangeLog::take_restore();
 
-		if ( self::code_fingerprint( $old ) === self::code_fingerprint( $new ) || ! self::has_code( $old ) ) {
-			return;
+		if ( self::code_fingerprint( $old ) !== self::code_fingerprint( $new ) && self::has_code( $old ) ) {
+			$history = self::get_history();
+			array_unshift(
+				$history,
+				array(
+					'time'  => time(),
+					'user'  => get_current_user_id(),
+					'value' => $old,
+				)
+			);
+			update_option( self::HISTORY_OPTION, array_slice( $history, 0, self::HISTORY_LIMIT ), false );
 		}
 
-		$history = self::get_history();
-		array_unshift(
-			$history,
-			array(
-				'time'  => time(),
-				'user'  => get_current_user_id(),
-				'value' => $old,
-			)
-		);
-		update_option( self::HISTORY_OPTION, array_slice( $history, 0, self::HISTORY_LIMIT ), false );
+		$details = self::describe_code_change( $old, $new );
+		if ( '' !== $details ) {
+			ChangeLog::add( $restoring ? ChangeLog::ACTION_GLOBAL_RESTORE : ChangeLog::ACTION_GLOBAL_CODE, 0, $details );
+		}
+
+		$changed = array();
+		foreach ( array_keys( self::defaults() ) as $key ) {
+			if ( ! in_array( $key, array( 'version', 'enabled', 'slots' ), true ) && $old[ $key ] !== $new[ $key ] ) {
+				$changed[] = self::setting_label( $key, $new[ $key ] );
+			}
+		}
+		if ( $changed ) {
+			ChangeLog::add( ChangeLog::ACTION_GLOBAL_SETTINGS, 0, implode( ', ', $changed ) );
+		}
+	}
+
+	/**
+	 * Logs global code saved for the first time (the option did not exist yet).
+	 *
+	 * @param string $option Option name.
+	 * @param mixed  $value  Value.
+	 * @return void
+	 */
+	public function record_first_save( $option, $value ) {
+		$details = self::describe_code_change( self::defaults(), self::normalize( is_array( $value ) ? $value : array() ) );
+		if ( '' !== $details ) {
+			ChangeLog::add( ChangeLog::ACTION_GLOBAL_CODE, 0, $details );
+		}
+	}
+
+	/**
+	 * What changed in the global code (master switch + slots), or ''.
+	 *
+	 * @param array $old Normalized settings.
+	 * @param array $new Normalized settings.
+	 * @return string
+	 */
+	private static function describe_code_change( array $old, array $new ) {
+		$details = array();
+		if ( $old['enabled'] !== $new['enabled'] ) {
+			$details[] = $new['enabled'] ? __( 'Global code turned on', 'advanced-header-footer-code-manager' ) : __( 'Global code turned off', 'advanced-header-footer-code-manager' );
+		}
+		$slots = ChangeLog::describe_slots( $old['slots'], $new['slots'] );
+		if ( '' !== $slots ) {
+			$details[] = $slots;
+		}
+		return implode( ' · ', $details );
+	}
+
+	/**
+	 * Change-log label of a setting.
+	 *
+	 * @param string $key   Setting key.
+	 * @param mixed  $value New value.
+	 * @return string
+	 */
+	private static function setting_label( $key, $value ) {
+		if ( 'editors_page_code' === $key ) {
+			return $value
+				? __( 'Editors can now edit page code', 'advanced-header-footer-code-manager' )
+				: __( 'Only administrators can edit page code', 'advanced-header-footer-code-manager' );
+		}
+		$label = ucfirst( str_replace( '_', ' ', $key ) );
+		return is_bool( $value ) ? $label . ': ' . ( $value ? __( 'on', 'advanced-header-footer-code-manager' ) : __( 'off', 'advanced-header-footer-code-manager' ) ) : $label;
 	}
 
 	/**
