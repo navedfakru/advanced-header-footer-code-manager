@@ -846,7 +846,8 @@
 
 		function show( name ) {
 			if ( ! $( '[data-ahfcm-panel="' + name + '"]' ).length ) {
-				name = 'code';
+				// First tab: "Global code", or "Tools" when editing is locked.
+				name = $tabs.first().attr( 'data-ahfcm-tab' );
 			}
 			$tabs.each( function () {
 				var active = this.getAttribute( 'data-ahfcm-tab' ) === name;
@@ -892,7 +893,7 @@
 			$tabs.filter( '[data-ahfcm-tab="' + this.getAttribute( 'data-ahfcm-goto' ) + '"]' ).trigger( 'click' ).trigger( 'focus' );
 		} );
 
-		show( ( window.location.hash || '#code' ).slice( 1 ) );
+		show( window.location.hash.slice( 1 ) );
 
 		// Announce the save result (the settings page reloads after saving).
 		var $notice = $( '.ahfcm-shell .notice' ).first();

@@ -21,14 +21,17 @@ final class Visibility {
 	const WHERE_EDITOR  = 'editor';
 
 	/**
-	 * Roles that could ever see a button (they can publish raw HTML).
+	 * Roles that could ever see a button: they can publish raw HTML and, unless
+	 * editors may edit page code, manage options.
 	 *
 	 * @return array<string,string> Role slug => name.
 	 */
 	public static function eligible_roles() {
-		$roles = array();
+		$editors = Settings::get()['editors_page_code'];
+		$roles   = array();
 		foreach ( wp_roles()->roles as $slug => $role ) {
-			if ( ! empty( $role['capabilities']['unfiltered_html'] ) ) {
+			$caps = $role['capabilities'];
+			if ( ! empty( $caps['unfiltered_html'] ) && ( $editors || ! empty( $caps['manage_options'] ) ) ) {
 				$roles[ $slug ] = translate_user_role( $role['name'] );
 			}
 		}

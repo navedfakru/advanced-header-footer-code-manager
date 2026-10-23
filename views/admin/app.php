@@ -3,7 +3,8 @@
  * Settings → Header & Footer Code: app shell with a top bar and tab navigation.
  *
  * Sections inside the form (saved together): Global code, Integrations,
- * Output, Editor. Outside the form: Tools, Help.
+ * Output, Editor. Outside the form: Tools, Help. While code editing is locked,
+ * or for administrators without unfiltered_html, only Tools and Help are shown.
  *
  * @var array                                     $settings      Global settings.
  * @var array                                     $history       Global code history.
@@ -15,6 +16,11 @@
  * @var array<string,string>                      $roles         Roles that may see toolbar buttons.
  * @var \WP_User[]                                $users         Users that may see toolbar buttons.
  * @var \WP_Post_Type[]                           $post_types    Public post types.
+ * @var string                                    $lock_reason   Why editing is locked ('' = not locked).
+ * @var bool                                      $can_edit      Current user may edit global code.
+ * @var array[]                                   $change_log    Change log entries.
+ * @var int[]                                     $page_history  Posts with earlier code versions.
+ * @var bool                                      $safe_constant AHFCM_SAFE_MODE is set.
  *
  * @package AHFCM
  */
@@ -26,7 +32,8 @@ use AHFCM\Core\Settings;
 $ahfcm_opt = Settings::OPTION;
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only notice key.
 $ahfcm_notice = isset( $_GET['ahfcm_notice'] ) ? sanitize_key( wp_unslash( $_GET['ahfcm_notice'] ) ) : '';
-$ahfcm_live   = $settings['enabled'] && Settings::has_code( $settings );
+$ahfcm_live   = $settings['enabled'] && Settings::has_code( $settings ) && ! $safe_constant;
+$ahfcm_locked = '' !== $lock_reason || ! $can_edit;
 
 $ahfcm_sections = array(
 	'code'         => array( __( 'Global code', 'advanced-header-footer-code-manager' ), 'M8.6 16.6 4 12l4.6-4.6L7.2 6l-6 6 6 6 1.4-1.4Zm6.8 0L20 12l-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z', true ),
@@ -36,6 +43,11 @@ $ahfcm_sections = array(
 	'tools'        => array( __( 'Tools', 'advanced-header-footer-code-manager' ), 'M22.7 19 13.6 9.9a6.4 6.4 0 0 0-1.5-6.9 6.6 6.6 0 0 0-7.4-1.3L9 6 6 9 1.6 4.7a6.6 6.6 0 0 0 1.4 7.4 6.4 6.4 0 0 0 6.9 1.5l9.1 9.1a1 1 0 0 0 1.4 0l2.3-2.3a1 1 0 0 0 0-1.4Z', false ),
 	'help'         => array( __( 'Help', 'advanced-header-footer-code-manager' ), 'M11 18h2v-2h-2v2Zm1-16a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4Z', false ),
 );
+if ( $ahfcm_locked ) {
+	// Read-only: only the sections outside the settings form.
+	$ahfcm_sections = array_intersect_key( $ahfcm_sections, array_flip( array( 'tools', 'help' ) ) );
+}
+$ahfcm_first = (string) key( $ahfcm_sections );
 ?>
 <div class="wrap ahfcm-app ahfcm-shell ahfcm-theme-<?php echo esc_attr( $settings['editor_theme'] ); ?>" data-ahfcm-root data-ahfcm-context="global">
 
@@ -61,19 +73,29 @@ $ahfcm_sections = array(
 
 			<span class="ahfcm-status-pill <?php echo $ahfcm_live ? 'is-live' : 'is-idle'; ?>">
 				<span class="ahfcm-status-pill__dot" aria-hidden="true"></span>
-				<?php echo $ahfcm_live ? esc_html__( 'Global code live', 'advanced-header-footer-code-manager' ) : esc_html__( 'Global code not running', 'advanced-header-footer-code-manager' ); ?>
+				<?php
+				if ( $safe_constant ) {
+					esc_html_e( 'Safe mode: no code printed', 'advanced-header-footer-code-manager' );
+				} elseif ( $ahfcm_live ) {
+					esc_html_e( 'Global code live', 'advanced-header-footer-code-manager' );
+				} else {
+					esc_html_e( 'Global code not running', 'advanced-header-footer-code-manager' );
+				}
+				?>
 			</span>
 
-			<div class="ahfcm-topbar__actions" data-ahfcm-submit>
-				<span class="ahfcm-topbar__dirty" data-ahfcm-dirty hidden><span class="ahfcm-dot" aria-hidden="true"></span><?php esc_html_e( 'Unsaved changes', 'advanced-header-footer-code-manager' ); ?></span>
-				<button type="submit" form="ahfcm-settings-form" class="button button-primary ahfcm-save"><?php esc_html_e( 'Save changes', 'advanced-header-footer-code-manager' ); ?></button>
-			</div>
+			<?php if ( ! $ahfcm_locked ) : ?>
+				<div class="ahfcm-topbar__actions" data-ahfcm-submit>
+					<span class="ahfcm-topbar__dirty" data-ahfcm-dirty hidden><span class="ahfcm-dot" aria-hidden="true"></span><?php esc_html_e( 'Unsaved changes', 'advanced-header-footer-code-manager' ); ?></span>
+					<button type="submit" form="ahfcm-settings-form" class="button button-primary ahfcm-save"><?php esc_html_e( 'Save changes', 'advanced-header-footer-code-manager' ); ?></button>
+				</div>
+			<?php endif; ?>
 		</header>
 
 		<div class="ahfcm-tabbar">
 			<div class="ahfcm-tabbar__tabs" role="tablist" aria-label="<?php esc_attr_e( 'Sections', 'advanced-header-footer-code-manager' ); ?>">
 				<?php foreach ( $ahfcm_sections as $ahfcm_key => $ahfcm_section ) : ?>
-					<a href="#<?php echo esc_attr( $ahfcm_key ); ?>" id="ahfcm-tab-<?php echo esc_attr( $ahfcm_key ); ?>" class="ahfcm-nav<?php echo 'code' === $ahfcm_key ? ' is-active' : ''; ?>" role="tab" data-ahfcm-tab="<?php echo esc_attr( $ahfcm_key ); ?>" aria-controls="ahfcm-section-<?php echo esc_attr( $ahfcm_key ); ?>" aria-selected="<?php echo 'code' === $ahfcm_key ? 'true' : 'false'; ?>" tabindex="<?php echo 'code' === $ahfcm_key ? '0' : '-1'; ?>">
+					<a href="#<?php echo esc_attr( $ahfcm_key ); ?>" id="ahfcm-tab-<?php echo esc_attr( $ahfcm_key ); ?>" class="ahfcm-nav<?php echo $ahfcm_first === $ahfcm_key ? ' is-active' : ''; ?>" role="tab" data-ahfcm-tab="<?php echo esc_attr( $ahfcm_key ); ?>" aria-controls="ahfcm-section-<?php echo esc_attr( $ahfcm_key ); ?>" aria-selected="<?php echo $ahfcm_first === $ahfcm_key ? 'true' : 'false'; ?>" tabindex="<?php echo $ahfcm_first === $ahfcm_key ? '0' : '-1'; ?>">
 						<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="<?php echo esc_attr( $ahfcm_section[1] ); ?>"/></svg>
 						<span><?php echo esc_html( $ahfcm_section[0] ); ?></span>
 					</a>
@@ -88,8 +110,28 @@ $ahfcm_sections = array(
 	<div class="ahfcm-layout">
 		<main class="ahfcm-main">
 			<?php settings_errors(); ?>
+			<?php if ( $ahfcm_locked ) : ?>
+				<div class="notice notice-warning">
+					<p>
+						<strong><?php esc_html_e( 'Code editing is locked on this site.', 'advanced-header-footer-code-manager' ); ?></strong>
+						<?php
+						if ( '' === $lock_reason ) {
+							esc_html_e( 'Your account cannot publish unfiltered HTML (for example because DISALLOW_UNFILTERED_HTML is set), which header and footer code requires.', 'advanced-header-footer-code-manager' );
+						} elseif ( 'filter' === $lock_reason ) {
+							esc_html_e( 'A plugin or theme locks it through the ahfcm_editing_locked filter.', 'advanced-header-footer-code-manager' );
+						} else {
+							/* translators: %s: constant name, e.g. DISALLOW_FILE_EDIT. */
+							printf( esc_html__( '%s is set in wp-config.php, so code cannot be changed from wp-admin.', 'advanced-header-footer-code-manager' ), '<code>' . esc_html( $lock_reason ) . '</code>' );
+						}
+						?>
+						<?php esc_html_e( 'Existing code keeps running. You can still read the change log and history, and use safe mode to stop all output.', 'advanced-header-footer-code-manager' ); ?>
+					</p>
+				</div>
+			<?php endif; ?>
 			<?php if ( 'restored' === $ahfcm_notice ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Previous version restored. The version it replaced was added to the history.', 'advanced-header-footer-code-manager' ); ?></p></div>
+			<?php elseif ( 'restored_post' === $ahfcm_notice ) : ?>
+				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Page code restored. The version it replaced was added to that page\'s history.', 'advanced-header-footer-code-manager' ); ?></p></div>
 			<?php elseif ( 'restore_failed' === $ahfcm_notice ) : ?>
 				<div class="notice notice-error is-dismissible"><p><?php esc_html_e( 'That history entry no longer exists.', 'advanced-header-footer-code-manager' ); ?></p></div>
 			<?php endif; ?>
@@ -97,15 +139,17 @@ $ahfcm_sections = array(
 				<div class="notice notice-info"><p><?php esc_html_e( 'The legacy "Page Header & Body Code Embed" snippet (WPCodeBox) is still active and keeps printing its own per-page code. Avoid enabling the same code in both places — see Tools.', 'advanced-header-footer-code-manager' ); ?></p></div>
 			<?php endif; ?>
 
-			<form id="ahfcm-settings-form" method="post" action="options.php" data-ahfcm-form>
-				<?php settings_fields( Settings::GROUP ); ?>
-				<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[_schema]" value="<?php echo esc_attr( Settings::SCHEMA_VERSION ); ?>">
-				<?php
-				foreach ( array( 'code', 'integrations', 'output', 'editor' ) as $ahfcm_key ) {
-					include __DIR__ . '/sections/' . $ahfcm_key . '.php';
-				}
-				?>
-			</form>
+			<?php if ( ! $ahfcm_locked ) : ?>
+				<form id="ahfcm-settings-form" method="post" action="options.php" data-ahfcm-form>
+					<?php settings_fields( Settings::GROUP ); ?>
+					<input type="hidden" name="<?php echo esc_attr( $ahfcm_opt ); ?>[_schema]" value="<?php echo esc_attr( Settings::SCHEMA_VERSION ); ?>">
+					<?php
+					foreach ( array( 'code', 'integrations', 'output', 'editor' ) as $ahfcm_key ) {
+						include __DIR__ . '/sections/' . $ahfcm_key . '.php';
+					}
+					?>
+				</form>
+			<?php endif; ?>
 
 			<?php
 			foreach ( array( 'tools', 'help' ) as $ahfcm_key ) {

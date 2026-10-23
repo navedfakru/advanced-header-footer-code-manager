@@ -56,6 +56,15 @@ $ahfcm_field = PostMeta::FORM_FIELD;
 			}
 			if ( Security::can_manage_global() ) {
 				printf( ' <a href="%s">%s</a>', esc_url( AdminPage::url() ), esc_html__( 'Edit global code →', 'advanced-header-footer-code-manager' ) );
+				$ahfcm_versions = count( PostMeta::get_history( $post->ID ) );
+				if ( $ahfcm_versions ) {
+					printf(
+						' <a href="%s">%s</a>',
+						esc_url( AdminPage::url() . '#tools' ),
+						/* translators: %d: number of earlier versions. */
+						esc_html( sprintf( _n( '%d earlier version →', '%d earlier versions →', $ahfcm_versions, 'advanced-header-footer-code-manager' ), $ahfcm_versions ) )
+					);
+				}
 			}
 			?>
 		</span>

@@ -267,6 +267,16 @@
 .ahfcm-list { margin: 0; padding-left: 18px; list-style: disc; }
 .ahfcm-list li { margin-bottom: 10px; }
 .ahfcm-keys { display: grid; grid-template-columns: auto 1fr; gap: var(--ahfcm-space-2) var(--ahfcm-space-4); margin: 0 0 var(--ahfcm-space-3); }
+.ahfcm-list .button-small { margin-left: var(--ahfcm-space-2); vertical-align: baseline; }
+.ahfcm-history-item { margin: var(--ahfcm-space-2) 0; padding: var(--ahfcm-space-2) var(--ahfcm-space-3); border: 1px solid var(--ahfcm-border); border-radius: var(--ahfcm-radius-sm); }
+.ahfcm-history-item > summary { cursor: pointer; }
+.ahfcm-history-item > summary .ahfcm-muted { margin-left: var(--ahfcm-space-2); }
+.ahfcm-history-table td { vertical-align: middle; }
+.ahfcm-history-table .ahfcm-diff-row td { padding-top: 0; border-bottom: 1px solid var(--ahfcm-border); }
+.ahfcm-diff-row summary { cursor: pointer; color: var(--ahfcm-text-secondary); }
+.ahfcm-diff-row details { overflow-x: auto; }
+.ahfcm-diff-row table.diff { width: 100%; min-width: 480px; margin-top: var(--ahfcm-space-2); table-layout: fixed; font: 12px/1.5 var(--ahfcm-font-mono); }
+.ahfcm-diff-row table.diff td { overflow-wrap: anywhere; white-space: pre-wrap; vertical-align: top; }
 .ahfcm-keys dt { white-space: nowrap; }
 .ahfcm-keys dd { margin: 0; color: var(--ahfcm-text-secondary); }
 .ahfcm-keys kbd {

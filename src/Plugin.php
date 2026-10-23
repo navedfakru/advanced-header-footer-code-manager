@@ -2,7 +2,7 @@
 /**
  * Plugin bootstrap: wires every component to WordPress.
  *
- *     Core\         storage, output, permissions, upgrades
+ *     Core\         storage, output, permissions, safe mode, change log, upgrades
  *     Api\          private REST API used by the editor panel
  *     Admin\        settings app, meta box, tools
  *     Editor\       shared CodeMirror editor, fields and panel
@@ -18,6 +18,7 @@ use AHFCM\Admin\MetaBox;
 use AHFCM\Api\Rest;
 use AHFCM\Core\Injector;
 use AHFCM\Core\PostMeta;
+use AHFCM\Core\SafeMode;
 use AHFCM\Core\Security;
 use AHFCM\Core\Settings;
 use AHFCM\Core\Updater;
@@ -69,6 +70,7 @@ final class Plugin {
 		$this->booted = true;
 
 		Security::register();
+		SafeMode::register();
 		Updater::register();
 		Upgrade::register();
 		( new Settings() )->register();

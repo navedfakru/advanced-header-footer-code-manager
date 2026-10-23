@@ -7,7 +7,7 @@ per page, or per **Breakdance / Oxygen** template, header, footer, popup or glob
 You edit the code in CodeMirror, with autocomplete, linting, formatting and a color picker,
 from the **block editor**, the **Breakdance / Oxygen builder**, or the settings app.
 
-- Version 2.3.1, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
+- Version 2.4.0, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
 - Integrations: Gutenberg (block editor), Breakdance 2+, Oxygen 6 (Oxygen Classic 4.x is not supported)
 - License: GPL-2.0-or-later. It bundles js-beautify 1.15.4 (MIT).
 
@@ -93,10 +93,12 @@ template code stops printing, but global and per-page code keep working.
 |---|---|
 | **Global code** | site-wide Header/Footer code and its master switch |
 | **Integrations** | Block editor, Breakdance and Oxygen cards (detected/not installed, on/off), toolbar icon, builder button, which template types get code, whether code runs in the builder preview, and who sees the toolbar buttons (roles, hidden users) |
-| **Output** | which content types get per-page code, hook priorities, HTML comment markers |
+| **Output** | whether editors can edit page code, which content types get per-page code, hook priorities, HTML comment markers |
 | **Editor** | theme (dark/light), editor height, delete data on uninstall |
-| **Tools** | import from the old "Page Header & Body Code Embed" snippet, global code history (restore the last 5 versions) |
-| **Help** | how placement works, keyboard shortcuts |
+| **Tools** | safe mode, change log, global and page code history (compare and restore the last 10 versions), import from the old "Page Header & Body Code Embed" snippet |
+| **Help** | how placement works, security, keyboard shortcuts |
+
+While code editing is locked (see Security) the app shows only Tools and Help, read-only.
 
 ## Security
 
@@ -105,8 +107,18 @@ access is restricted:
 
 | Action | Requires |
 |---|---|
+| Open the settings page, read the change log and history | `manage_options` (meta-cap `ahfcm_view`) |
 | Edit global code and settings | `manage_options` + `unfiltered_html` (meta-cap `ahfcm_manage_global`) |
-| Edit a post's code | `edit_post` for that post + `unfiltered_html` (meta-cap `ahfcm_edit_post_code`) |
+| Edit a post's code | `edit_post` for that post + `unfiltered_html` + `manage_options` (meta-cap `ahfcm_edit_post_code`). With Output → "Editors can edit page code" on, `manage_options` is not required. |
+
+- **Locked editing.** `DISALLOW_FILE_EDIT` or `DISALLOW_FILE_MODS` (or the
+  `ahfcm_editing_locked` filter) map both code capabilities to `do_not_allow`;
+  `DISALLOW_UNFILTERED_HTML` removes `unfiltered_html`. Existing code keeps running.
+- **Safe mode.** `define( 'AHFCM_SAFE_MODE', true )` stops all output for everyone;
+  `?ahfcm_safe_mode=1` stops it for one request when the user has `manage_options`.
+  Safe mode overrides the `ahfcm_should_inject` filter. Nothing stored changes.
+- **Change log.** Every change to global code, page code and settings is recorded
+  (user, time, which parts changed — never the code).
 
 - Every save is nonce-protected: the Settings API, a per-post meta box nonce, or the REST nonce.
 - The private REST routes `ahfcm/v1/post/{id}` and `ahfcm/v1/global` use the same checks.
@@ -192,9 +204,11 @@ code panel swaps in the dark set in `assets/css/panel.css`. Icons live in
 | Data | Where |
 |---|---|
 | Global code + settings | option `ahfcm_global_settings` (autoloaded, schema version 4) |
-| Last 5 global versions | option `ahfcm_global_history` |
+| Last 10 global versions | option `ahfcm_global_history` |
+| Change log (last 200) | option `ahfcm_change_log` (not autoloaded) |
 | Plugin version | option `ahfcm_version` |
 | Per-post / per-template code | post meta `_ahfcm_settings` (protected; stored with revisions) |
+| Last 10 versions of a post's code | post meta `_ahfcm_history` (protected) |
 
 2.3.0 adds `placement` (and a per-page `priority`) to each code slot (schema 4). Existing
 code keeps printing where it did: global code keeps its priority and page code follows
@@ -206,7 +220,8 @@ converted when read.
 | Hook | Purpose |
 |---|---|
 | `ahfcm_integrations` | add or replace integrations |
-| `ahfcm_should_inject( bool )` | allow or block output for the current request |
+| `ahfcm_should_inject( bool )` | allow or block output for the current request (safe mode always wins) |
+| `ahfcm_editing_locked( bool $locked, string $reason )` | lock code editing for everyone |
 | `ahfcm_snippet_output( string $code, string $slot, string $source, int $post_id )` | change or drop one snippet |
 | `ahfcm_post_types( string[] )` | post types with per-page code |
 | `ahfcm_builder_query_params( string[] )` | query args that mark builder previews |
@@ -226,7 +241,7 @@ wp eval-file wp-content/plugins/advanced-header-footer-code-manager/tests/verify
 The suite runs 100+ checks against a live local or staging site. It creates temporary
 content and removes it afterwards. It covers placement, the order of parts, scoping,
 every switch, byte-exact output, exclusions (feeds, REST, AJAX, builder preview),
-permissions, nonces, revisions, the stale-page guard, builder templates, global blocks,
+permissions, nonces, revisions, safe mode, locked editing, the change log, page history and restore, the stale-page guard, builder templates, global blocks,
 popups, toolbar visibility, the meta box versus the panel, the legacy import and
 deactivate/reactivate. Builder checks adapt to whichever builder is running
 (Breakdance or Oxygen).
