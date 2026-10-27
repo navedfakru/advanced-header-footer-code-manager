@@ -7,7 +7,7 @@ per page, or per **Breakdance / Oxygen** template, header, footer, popup or glob
 You edit the code in CodeMirror, with autocomplete, linting, formatting and a color picker,
 from the **block editor**, the **Breakdance / Oxygen builder**, or the settings app.
 
-- Version 2.4.0, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
+- Version 2.4.1, requires WordPress 6.4+ and PHP 7.4+ (developed on WP 7.1, PHP 8.2)
 - Integrations: Gutenberg (block editor), Breakdance 2+, Oxygen 6 (Oxygen Classic 4.x is not supported)
 - License: GPL-2.0-or-later. It bundles js-beautify 1.15.4 (MIT).
 
