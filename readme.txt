@@ -4,7 +4,7 @@ Tags: header, footer, code, breakdance, oxygen
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.4.0
+Stable tag: 2.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,6 +77,9 @@ No. This plugin outputs HTML, CSS and JavaScript only, and never evaluates PHP.
 
 == Upgrade Notice ==
 
+= 2.4.1 =
+Fixes "Not saved: this page was opened before the plugin was updated" when saving settings on a site that still uses the default settings.
+
 = 2.4.0 =
 Editors can no longer edit page code unless you turn on Output → "Editors can edit page code". Adds safe mode, a change log and page code history.
 
@@ -87,6 +90,9 @@ Editors can no longer edit page code unless you turn on Output → "Editors can 
 3. Output: content types with per-page code, global header and footer positions, HTML comment markers.
 
 == Changelog ==
+
+= 2.4.1 =
+* Fix: saving the settings page could fail with "Not saved: this page was opened before the plugin was updated" while the stored settings were still the defaults. WordPress runs the settings check a second time in that case (update_option() falls through to add_option()), and the second run was wrongly refused.
 
 = 2.4.0 =
 * Security: only administrators can edit code by default. New setting Output → "Editors can edit page code" (off) lets editors with unfiltered_html edit page code again; global code stays administrator-only.

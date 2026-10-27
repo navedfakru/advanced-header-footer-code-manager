@@ -828,6 +828,21 @@ try {
 	ahfcm_check( 'Settings form without the format version keeps stored settings', $kept === $stored_global );
 	ahfcm_check( 'Settings form with the current format version saves normally', true === $fresh['enabled'] );
 
+	// Stored settings equal to the registered default make update_option() fall
+	// through to add_option(), which runs the sanitize callback a second time on
+	// the already-sanitized value (no `_schema`). That second run must not refuse.
+	if ( ! isset( get_registered_settings()[ Settings::OPTION ] ) ) {
+		( new Settings() )->register_setting();
+	}
+	update_option( Settings::OPTION, Settings::defaults() );
+	$ahfcm_defaults_flag  = Settings::defaults()['output_markers'];
+	$_POST['option_page'] = Settings::GROUP;
+	update_option( Settings::OPTION, array( '_schema' => Settings::SCHEMA_VERSION, 'output_markers' => $ahfcm_defaults_flag ? '0' : '1' ) );
+	$_POST = array();
+	Settings::flush_cache();
+	ahfcm_check( 'Settings form saves while stored settings equal the defaults', ( ! $ahfcm_defaults_flag ) === Settings::get()['output_markers'] );
+	update_option( Settings::OPTION, $stored_global );
+
 	WP_CLI::line( 'Revisions' );
 	ahfcm_submit_meta_box( $page_b, array( 'slots' => array( 'head' => array( 'code' => '<!-- REV-1 -->' ) ) ) );
 	$_POST = array(

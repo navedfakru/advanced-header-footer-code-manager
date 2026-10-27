@@ -229,7 +229,15 @@ final class Settings {
 		// update_option() calls are not affected.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- options.php already verified the nonce.
 		$is_form = isset( $_POST['option_page'] ) && self::GROUP === $_POST['option_page'];
-		if ( $is_form && ( ! is_array( $input ) || ! isset( $input['_schema'] ) || (int) $input['_schema'] !== self::SCHEMA_VERSION ) ) {
+
+		// update_option() passes an already-sanitized value back through this
+		// callback when the stored value equals the registered default (it falls
+		// through to add_option()). That value carries `version`, not `_schema`,
+		// so accept it; a stale form posts neither and is still refused.
+		$has_schema        = is_array( $input ) && isset( $input['_schema'] ) && (int) $input['_schema'] === self::SCHEMA_VERSION;
+		$already_sanitized = is_array( $input ) && ! isset( $input['_schema'] ) && isset( $input['version'] ) && (int) $input['version'] === self::SCHEMA_VERSION;
+
+		if ( $is_form && ! $has_schema && ! $already_sanitized ) {
 			add_settings_error(
 				self::OPTION,
 				'ahfcm_stale_form',
